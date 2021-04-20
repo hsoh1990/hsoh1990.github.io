@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Electron + Vue.js 애플리케이션 만들기 - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"ELectron을 사용한 애플리케이션을 만들경우 사용자에게 보여지는 GUI(Renderer)를 Vue.js  를 이용하여 구현할 수 있다. Electron에 대한 설명은 Electron 애플리케이션 만들기를 참고하고 Vue.js를 참고 하면 된다.\n  \nTable of Contents\n\nQuick start\nProject Structure\nNPM Scripts\nReference\nContributors\n\nvue로 구축 된 electron 애플리케이션을 만들기 위한 보일러 플레이트는 electron-vue를 사용한다. electron-vue은 스캐폴딩을 위한 vue-cli, vue-loader이 있는 webpack, electron-packager, electron-builder, vue-router, vuex 등과 같이 가장 많이 사용되는 플러그인을 사용한다.\nQuick start12345678# vue-cli와 스캐폴딩 보일러 플레이트 설치$ npm install -g vue-cli$ vue init simulatedgreg/electron-vue my-project# 의존성 설치 및 개발자 모드로 실행$ cd my-project$ npm install$ npm run dev\nProject Structure12345678910111213141516171819202122232425262728293031323334353637my-project├─ .electron-vue│  └─ &lt;build/development&gt;.js files├─ build│  └─ icons/├─ dist│  ├─ electron/│  └─ web/├─ node_modules/├─ src│  ├─ main│  │  ├─ index.dev.js│  │  └─ index.js│  ├─ renderer│  │  ├─ components/│  │  ├─ router/│  │  ├─ store/│  │  ├─ App.vue│  │  └─ main.js│  └─ index.ejs├─ static/├─ test│  ├─ e2e│  │  ├─ specs/│  │  ├─ index.js│  │  └─ utils.js│  ├─ unit│  │  ├─ specs/│  │  ├─ index.js│  │  └─ karma.config.js│  └─ .eslintrc├─ .babelrc├─ .eslintignore├─ .eslintrc.js├─ .gitignore├─ package.json└─ README.md\n\nsrc\nmain 프로세스 코드로 electron을 구동에 필요한 코드 정의\nrenderer 프로세스 코드로 vue.js 기반의 코드를 작성(cli로 설치시 기본 모듈을 정의되어 있음)\n\n\nstatic\nmain, renderer 각 프로세스가 소비 할 수 있는 Static assets을 배치\nrenderer 에서는 static/imgs/some.png 디렉토리로 검색\nmain에서는  path.join(__static, &#39;/somePath..&#39;)로 디렉토리 검색\n\n\ntest\nelectron-vue는 유닛 테스트를 위해 Karma 테스트 러너, Mocha 테스트 프레임워크를 사용\nelectron-vue는 엔드 투 엔드 테스트를 위해 Spectron 과 Mocha 테스트 프레임 워크를 사용\n\n\n\nNPM Scripts\nnpm run build -&gt; 프로덕션과 패키지 용 앱을 빌드(Building Your App)\nnpm run dev -&gt; 현재 프로젝트를 개발용으로 실행\nnpm run lint -&gt; 모든 src/와 test/의 JS &amp; Vue component 파일을 Lint \nnpm run lint:fix -&gt; 모든 src/와 test/의 JS &amp; Vue component 파일을 Lint하고 문재 해결을 시도\nnpm run pack -&gt; npm run pack:main &amp; npm run pack:renderer 둘 다 실행\nnpm run pack:main  -&gt; main 프로세스 소스 코드를 번들\nnpm run pack:renderer -&gt;  renderer 프로세스 소스 코드를 번들\nnpm run unit  -&gt; Karma와 Jasmine로 단위 테스트를 실행 (Unit Testing)\nnpm run e2e -&gt; Spectron + Mocha로 end-to-end 테스트를 실행(End-to-end Testing)\nnpm test -&gt; npm run unit &amp; npm run e2e 둘 다 실행(Testing**)\n\n\nReference\nhttps://electronjs.org/docs\nhttps://kr.vuejs.org/v2/guide/index.html\nhttps://github.com/SimulatedGREG/electron-vue/tree/master/docs/ko\nhttps://simulatedgreg.gitbooks.io/electron-vue/content/ko/getting_started.html\n\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2019-01-19T19:46:04+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2019-01-19T19:46:04+09:00","description":"ELectron을 사용한 애플리케이션을 만들경우 사용자에게 보여지는 GUI(Renderer)를 Vue.js  를 이용하여 구현할 수 있다. Electron에 대한 설명은 Electron 애플리케이션 만들기를 참고하고 Vue.js를 참고 하면 된다.","headline":"Electron + Vue.js 애플리케이션 만들기","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/01/19/electron-vue-tutorial/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2019/01/19/electron-vue-tutorial/","keywords":"node.js, electron, Vue.js"}</script>
+    <meta name="description" content="ELectron을 사용한 애플리케이션을 만들경우 사용자에게 보여지는 GUI(Renderer)를 Vue.js  를 이용하여 구현할 수 있다. Electron에 대한 설명은 Electron 애플리케이션 만들기를 참고하고 Vue.js를 참고 하면 된다.">
+<meta name="keywords" content="node.js,electron,Vue.js">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Electron + Vue.js 애플리케이션 만들기">
+<meta property="og:url" content="http://yoursite.com/2019/01/19/electron-vue-tutorial/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="ELectron을 사용한 애플리케이션을 만들경우 사용자에게 보여지는 GUI(Renderer)를 Vue.js  를 이용하여 구현할 수 있다. Electron에 대한 설명은 Electron 애플리케이션 만들기를 참고하고 Vue.js를 참고 하면 된다.">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.735Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Electron + Vue.js 애플리케이션 만들기">
+<meta name="twitter:description" content="ELectron을 사용한 애플리케이션을 만들경우 사용자에게 보여지는 GUI(Renderer)를 Vue.js  를 이용하여 구현할 수 있다. Electron에 대한 설명은 Electron 애플리케이션 만들기를 참고하고 Vue.js를 참고 하면 된다.">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Electron + Vue.js 애플리케이션 만들기
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2019-01-19T19:46:04+09:00">
+	
+		    Jan 19, 2019
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/electron-튜토리얼/">electron 튜토리얼</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>ELectron을 사용한 애플리케이션을 만들경우 사용자에게 보여지는 GUI(Renderer)를 Vue.js  를 이용하여 구현할 수 있다. Electron에 대한 설명은 <a href="https://hsoh1990.github.io/2019/01/18/electron-tutorial/" target="_blank" rel="noopener">Electron 애플리케이션 만들기</a>를 참고하고 <a href="https://kr.vuejs.org/v2/guide/index.html" target="_blank" rel="noopener">Vue.js</a>를 참고 하면 된다.</p>
+<a id="more"></a>  
+<p><strong>Table of Contents</strong></p>
+<ul>
+<li><a href="#Quick-start">Quick start</a></li>
+<li><a href="#Project-Structure">Project Structure</a></li>
+<li><a href="#NPM-Scripts">NPM Scripts</a></li>
+<li><a href="#Reference">Reference</a></li>
+<li><a href="#Contributors">Contributors</a></li>
+</ul>
+<p>vue로 구축 된 electron 애플리케이션을 만들기 위한 보일러 플레이트는 <a href="https://github.com/SimulatedGREG/electron-vue/tree/master/docs/ko" target="_blank" rel="noopener">electron-vue</a>를 사용한다. electron-vue은 스캐폴딩을 위한 <code>vue-cli</code>, <code>vue-loader</code>이 있는 <code>webpack</code>, <code>electron-packager</code>, <code>electron-builder</code>, <code>vue-router</code>, <code>vuex</code> 등과 같이 가장 많이 사용되는 플러그인을 사용한다.</p>
+<h2 id="Quick-start"><a href="#Quick-start" class="headerlink" title="Quick start"></a>Quick start</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vue-cli와 스캐폴딩 보일러 플레이트 설치</span></span><br><span class="line">$ npm install -g vue-cli</span><br><span class="line">$ vue init simulatedgreg/electron-vue my-project</span><br><span class="line"></span><br><span class="line"><span class="comment"># 의존성 설치 및 개발자 모드로 실행</span></span><br><span class="line">$ <span class="built_in">cd</span> my-project</span><br><span class="line">$ npm install</span><br><span class="line">$ npm run dev</span><br></pre></td></tr></table></figure>
+<h2 id="Project-Structure"><a href="#Project-Structure" class="headerlink" title="Project Structure"></a>Project Structure</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">my-project</span><br><span class="line">├─ .electron-vue</span><br><span class="line">│  └─ &lt;build/development&gt;.js files</span><br><span class="line">├─ build</span><br><span class="line">│  └─ icons/</span><br><span class="line">├─ dist</span><br><span class="line">│  ├─ electron/</span><br><span class="line">│  └─ web/</span><br><span class="line">├─ node_modules/</span><br><span class="line">├─ src</span><br><span class="line">│  ├─ main</span><br><span class="line">│  │  ├─ index.dev.js</span><br><span class="line">│  │  └─ index.js</span><br><span class="line">│  ├─ renderer</span><br><span class="line">│  │  ├─ components/</span><br><span class="line">│  │  ├─ router/</span><br><span class="line">│  │  ├─ store/</span><br><span class="line">│  │  ├─ App.vue</span><br><span class="line">│  │  └─ main.js</span><br><span class="line">│  └─ index.ejs</span><br><span class="line">├─ static/</span><br><span class="line">├─ test</span><br><span class="line">│  ├─ e2e</span><br><span class="line">│  │  ├─ specs/</span><br><span class="line">│  │  ├─ index.js</span><br><span class="line">│  │  └─ utils.js</span><br><span class="line">│  ├─ unit</span><br><span class="line">│  │  ├─ specs/</span><br><span class="line">│  │  ├─ index.js</span><br><span class="line">│  │  └─ karma.config.js</span><br><span class="line">│  └─ .eslintrc</span><br><span class="line">├─ .babelrc</span><br><span class="line">├─ .eslintignore</span><br><span class="line">├─ .eslintrc.js</span><br><span class="line">├─ .gitignore</span><br><span class="line">├─ package.json</span><br><span class="line">└─ README.md</span><br></pre></td></tr></table></figure>
+<ul>
+<li>src<ul>
+<li><code>main</code> 프로세스 코드로 electron을 구동에 필요한 코드 정의</li>
+<li><code>renderer</code> 프로세스 코드로 vue.js 기반의 코드를 작성(cli로 설치시 기본 모듈을 정의되어 있음)</li>
+</ul>
+</li>
+<li>static<ul>
+<li><code>main</code>, <code>renderer</code> 각 프로세스가 소비 할 수 있는 Static assets을 배치</li>
+<li><code>renderer</code> 에서는 <code>static/imgs/some.png</code> 디렉토리로 검색</li>
+<li><code>main</code>에서는  <code>path.join(__static, &#39;/somePath..&#39;)</code>로 디렉토리 검색</li>
+</ul>
+</li>
+<li>test<ul>
+<li>electron-vue는 유닛 테스트를 위해 <a href="https://karma-runner.github.io/1.0/index.html" target="_blank" rel="noopener">Karma</a> 테스트 러너, <a href="https://mochajs.org/" target="_blank" rel="noopener">Mocha</a> 테스트 프레임워크를 사용</li>
+<li>electron-vue는 엔드 투 엔드 테스트를 위해 <a href="http://electron.atom.io/spectron/" target="_blank" rel="noopener">Spectron</a> 과 <a href="https://mochajs.org/" target="_blank" rel="noopener">Mocha</a> 테스트 프레임 워크를 사용</li>
+</ul>
+</li>
+</ul>
+<h2 id="NPM-Scripts"><a href="#NPM-Scripts" class="headerlink" title="NPM Scripts"></a>NPM Scripts</h2><ul>
+<li><code>npm run build</code> -&gt; 프로덕션과 패키지 용 앱을 빌드(<a href="https://simulatedgreg.gitbooks.io/electron-vue/content/ko/building_your_app.html" target="_blank" rel="noopener"><strong>Building Your App</strong></a>)</li>
+<li><code>npm run dev</code> -&gt; 현재 프로젝트를 개발용으로 실행</li>
+<li><code>npm run lint</code> -&gt; 모든 <code>src/</code>와 <code>test/</code>의 JS &amp; Vue component 파일을 Lint </li>
+<li><code>npm run lint:fix</code> -&gt; 모든 <code>src/</code>와 <code>test/</code>의 JS &amp; Vue component 파일을 Lint하고 문재 해결을 시도</li>
+<li><code>npm run pack</code> -&gt; <code>npm run pack:main</code> &amp; <code>npm run pack:renderer</code> 둘 다 실행</li>
+<li><code>npm run pack:main</code>  -&gt; <code>main</code> 프로세스 소스 코드를 번들</li>
+<li><code>npm run pack:renderer</code> -&gt;  <code>renderer</code> 프로세스 소스 코드를 번들</li>
+<li><code>npm run unit</code>  -&gt; Karma와 Jasmine로 단위 테스트를 실행 (<a href="https://simulatedgreg.gitbooks.io/electron-vue/content/ko/unittesting.html" target="_blank" rel="noopener"><strong>Unit Testing</strong></a>)</li>
+<li><code>npm run e2e</code> -&gt; Spectron + Mocha로 end-to-end 테스트를 실행(<a href="https://simulatedgreg.gitbooks.io/electron-vue/content/ko/end-to-end_testing.html" target="_blank" rel="noopener"><strong>End-to-end Testing</strong></a>)</li>
+<li><code>npm test</code> -&gt; <code>npm run unit</code> &amp; <code>npm run e2e</code> 둘 다 실행(<a href="https://simulatedgreg.gitbooks.io/electron-vue/content/ko/testing.html" target="_blank" rel="noopener">Testing**</a>)</li>
+<li></li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://electronjs.org/docs" target="_blank" rel="noopener">https://electronjs.org/docs</a></li>
+<li><a href="https://kr.vuejs.org/v2/guide/index.html" target="_blank" rel="noopener">https://kr.vuejs.org/v2/guide/index.html</a></li>
+<li><a href="https://github.com/SimulatedGREG/electron-vue/tree/master/docs/ko" target="_blank" rel="noopener">https://github.com/SimulatedGREG/electron-vue/tree/master/docs/ko</a></li>
+<li><a href="https://simulatedgreg.gitbooks.io/electron-vue/content/ko/getting_started.html" target="_blank" rel="noopener">https://simulatedgreg.gitbooks.io/electron-vue/content/ko/getting_started.html</a></li>
+</ul>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/Vue-js/">Vue.js</a> <a class="tag tag--primary tag--small t-link" href="/tags/electron/">electron</a> <a class="tag tag--primary tag--small t-link" href="/tags/node-js/">node.js</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/20/spring-core-validation/" data-tooltip="Spring 핵심 기술 (validation 추상화)" aria-label="PREVIOUS: Spring 핵심 기술 (validation 추상화)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/18/electron-tutorial/" data-tooltip="Electron 애플리케이션 만들기" aria-label="NEXT: Electron 애플리케이션 만들기">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/19/electron-vue-tutorial/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/19/electron-vue-tutorial/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/19/electron-vue-tutorial/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/20/spring-core-validation/" data-tooltip="Spring 핵심 기술 (validation 추상화)" aria-label="PREVIOUS: Spring 핵심 기술 (validation 추상화)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/18/electron-tutorial/" data-tooltip="Electron 애플리케이션 만들기" aria-label="NEXT: Electron 애플리케이션 만들기">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/19/electron-vue-tutorial/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/19/electron-vue-tutorial/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/19/electron-vue-tutorial/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/19/electron-vue-tutorial/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/19/electron-vue-tutorial/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/19/electron-vue-tutorial/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

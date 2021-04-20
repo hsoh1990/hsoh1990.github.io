@@ -1,0 +1,547 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Spring 핵심 기술 (IoC, Bean - 02) - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"Environment는 프로파일과 프로퍼티를 다루는 인터페이스로 테스트 환경, 프로덕션 환경등 각각에 환경에 따라 다른 빈들을 써야하는 경우 혹은 특정한 빈을 써야하는 경우 사용\n  \n프로파일\n프로파일은 빈들의 그룹\nApplicatioContext의 getEnvironment()를 통해 호출\n활성화할 프로파일 확인 및 설정\n\n12345678910@Componentpublic class AppRunner implements ApplicationRunner&#123;    @Autowired    ApplicationContext ctx;    @Override    public void run(ApplicationArguments args) throws Exception &#123;        Environment environment = ctx.getEnvironment();    &#125;&#125;\n\n클래스 정의 @Configuration @Profile(“test”) 를 통해 설정\n\n메소드 정의 @Bean  @Profile(“test”)를 통해 설정\n12345@Configuration@Profile(\"test\")public class TestConfiguration &#123;    ...&#125;\n\n-Dspring.profiles.active=”test,A,B…”으로 설정가능\n\n\n프로퍼티\n다양한 방법으로 정의할 수 있는 설정값\n-Dapp.name=spring5\nproperties파일 사용\n\n1app.about=spring\n\njava 사용방법\n\n12345678910111213141516@Componentpublic class AppRunner implements ApplicationRunner&#123;    @Autowired    ApplicationContext ctx;    @Value(\"$&#123;app.about&#125;\")    String appAbout;    @Override    public void run(ApplicationArguments args) throws Exception &#123;        Environment environment = ctx.getEnvironment();        System.out.println(environment.getProperty(\"app.name\"));        System.out.println(this.appAbout);    &#125;&#125;\n\n우선순위\nServletConfig 매개변수\nServletContext 매개변수\nJNDI (java:comp/env/)\nJVM 시스템 프로퍼티 (-Dkey=”value”)\nJVM 시스템 환경 변수(운영 체제 환경 변수)\n\n\n\nMessageSourcei18n 기능을 제고하는 인터페이스로 스프링 부트를 사용하면 별다른 설정 없이 messages.properties 사용가능\n\nApplicatioContext의 getMessageSource()를 통해 호출\nmessages.properties, messages_ko_kr.properties…\n\n1234# messages.propertiesgreeting=Hello, &#123;0&#125;#messages.propertiesgreeting=안녕, &#123;0&#125;\n123456789101112@Componentpublic class AppRunner implements ApplicationRunner&#123;    @Autowired    MessageSource messageSource;    @Override    public void run(ApplicationArguments args) throws Exception &#123;        System.out.println(messageSource.getMessage(\"greeting\", new String[]&#123;\"hsoh\"&#125;, Locale.KOREA));        System.out.println(messageSource.getMessage(\"greeting\", new String[]&#123;\"hsoh\"&#125;, Locale.getDefault()));    &#125;&#125;\nApplicationEventPublisher이벤트 프로그래밍에 필요한 인터페이스를 제공(옵저버 패턴의 구현체)\n\nApplicationEventPublisher의 메소드 publishEvent(ApplicationEvent event)로 이벤트 발생\n4.2 이전에는  ApplicationEvent를 상속받아서 이벤트 구현\n이벤트를 발생시키고 EventListener를 등록하여 이벤트 처리\n\n12345678910111213141516171819public class AppEvent &#123;    private int data;    private Object source;    public AppEvent(Object source, int data) &#123;        this.data = data;        this.source = source;    &#125;    public Object getSource() &#123;        return source;    &#125;    public int getData() &#123;        return data;    &#125;&#125;\n1234567891011@Componentpublic class AppRunner implements ApplicationRunner&#123;    @Autowired    ApplicationEventPublisher publisher;    @Override    public void run(ApplicationArguments args) throws Exception &#123;        publisher.publishEvent(new AppEvent(this, 100));    &#125;&#125;\n12345678910@Componentpublic class AppEventHandler &#123;    @EventListener    @Async    public void handle(AppEvent event)&#123;        System.out.println(Thread.currentThread().toString());        System.out.println(\"AppEventHandler = \" +event.getData());    &#125;&#125;\n\n순서지정은 @Order로 지정\n비동기적 실행은 @Async 사용\n\nResourceLoader리소스를 읽어오는 기능을 제공하는 인터페이스\n\nResourceLoader의 getResource(java.lang.String location)로 리소스 조회\n다양한 방법으로 조회가능\n파일 시스템에서 읽기\n클래스 패스에서 읽기\nURL로 읽기\n상대/절대 경로로 읽기\n\n\n\n1234567891011121314@Componentpublic class AppRunner implements ApplicationRunner&#123;    @Autowired    ResourceLoader resourceLoader;    @Override    public void run(ApplicationArguments args) throws Exception &#123;        Resource resource = resourceLoader.getResource(\"classpath:text.txt\");        System.out.println(resource.exists());        System.out.println(resource.getDescription());        Files.lines(Paths.get(resource.getURI())).forEach(System.out::println);    &#125;&#125;\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2019-01-06T11:30:00+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2019-01-06T11:30:00+09:00","description":"Environment는 프로파일과 프로퍼티를 다루는 인터페이스로 테스트 환경, 프로덕션 환경등 각각에 환경에 따라 다른 빈들을 써야하는 경우 혹은 특정한 빈을 써야하는 경우 사용","headline":"Spring 핵심 기술 (IoC, Bean - 02)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/01/06/spring-core-ioc-02/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2019/01/06/spring-core-ioc-02/","keywords":"java, spring boot, IoC, Bean"}</script>
+    <meta name="description" content="Environment는 프로파일과 프로퍼티를 다루는 인터페이스로 테스트 환경, 프로덕션 환경등 각각에 환경에 따라 다른 빈들을 써야하는 경우 혹은 특정한 빈을 써야하는 경우 사용">
+<meta name="keywords" content="java,spring boot,IoC,Bean">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Spring 핵심 기술 (IoC, Bean - 02)">
+<meta property="og:url" content="http://yoursite.com/2019/01/06/spring-core-ioc-02/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="Environment는 프로파일과 프로퍼티를 다루는 인터페이스로 테스트 환경, 프로덕션 환경등 각각에 환경에 따라 다른 빈들을 써야하는 경우 혹은 특정한 빈을 써야하는 경우 사용">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.747Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spring 핵심 기술 (IoC, Bean - 02)">
+<meta name="twitter:description" content="Environment는 프로파일과 프로퍼티를 다루는 인터페이스로 테스트 환경, 프로덕션 환경등 각각에 환경에 따라 다른 빈들을 써야하는 경우 혹은 특정한 빈을 써야하는 경우 사용">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Spring 핵심 기술 (IoC, Bean - 02)
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2019-01-06T11:30:00+09:00">
+	
+		    Jan 06, 2019
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/Spring-핵심-기술/">Spring 핵심 기술</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>Environment는 프로파일과 프로퍼티를 다루는 인터페이스로 테스트 환경, 프로덕션 환경등 각각에 환경에 따라 다른 빈들을 써야하는 경우 혹은 특정한 빈을 써야하는 경우 사용</p>
+<a id="more"></a>  
+<h2 id="프로파일"><a href="#프로파일" class="headerlink" title="프로파일"></a>프로파일</h2><ul>
+<li>프로파일은 빈들의 그룹</li>
+<li>ApplicatioContext의 getEnvironment()를 통해 호출</li>
+<li>활성화할 프로파일 확인 및 설정</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppRunner</span> <span class="keyword">implements</span> <span class="title">ApplicationRunner</span></span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ApplicationContext ctx;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(ApplicationArguments args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Environment environment = ctx.getEnvironment();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>클래스 정의 @Configuration @Profile(“test”) 를 통해 설정</p>
+</li>
+<li><p>메소드 정의 @Bean  @Profile(“test”)를 통해 설정</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@Profile</span>(<span class="string">"test"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestConfiguration</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>-Dspring.profiles.active=”test,A,B…”으로 설정가능</p>
+</li>
+</ul>
+<h2 id="프로퍼티"><a href="#프로퍼티" class="headerlink" title="프로퍼티"></a>프로퍼티</h2><ul>
+<li>다양한 방법으로 정의할 수 있는 설정값</li>
+<li>-Dapp.name=spring5</li>
+<li>properties파일 사용</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">app.about=spring</span><br></pre></td></tr></table></figure>
+<ul>
+<li>java 사용방법</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppRunner</span> <span class="keyword">implements</span> <span class="title">ApplicationRunner</span></span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ApplicationContext ctx;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Value</span>(<span class="string">"$&#123;app.about&#125;"</span>)</span><br><span class="line">    String appAbout;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(ApplicationArguments args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Environment environment = ctx.getEnvironment();</span><br><span class="line">        System.out.println(environment.getProperty(<span class="string">"app.name"</span>));</span><br><span class="line">        System.out.println(<span class="keyword">this</span>.appAbout);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>우선순위<ul>
+<li>ServletConfig 매개변수</li>
+<li>ServletContext 매개변수</li>
+<li>JNDI (java:comp/env/)</li>
+<li>JVM 시스템 프로퍼티 (-Dkey=”value”)</li>
+<li>JVM 시스템 환경 변수(운영 체제 환경 변수)</li>
+</ul>
+</li>
+</ul>
+<h2 id="MessageSource"><a href="#MessageSource" class="headerlink" title="MessageSource"></a>MessageSource</h2><p>i18n 기능을 제고하는 인터페이스로 스프링 부트를 사용하면 별다른 설정 없이 messages.properties 사용가능</p>
+<ul>
+<li>ApplicatioContext의 getMessageSource()를 통해 호출</li>
+<li>messages.properties, messages_ko_kr.properties…</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># messages.properties</span><br><span class="line">greeting=Hello, &#123;0&#125;</span><br><span class="line">#messages.properties</span><br><span class="line">greeting=안녕, &#123;0&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppRunner</span> <span class="keyword">implements</span> <span class="title">ApplicationRunner</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    MessageSource messageSource;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(ApplicationArguments args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.out.println(messageSource.getMessage(<span class="string">"greeting"</span>, <span class="keyword">new</span> String[]&#123;<span class="string">"hsoh"</span>&#125;, Locale.KOREA));</span><br><span class="line">        System.out.println(messageSource.getMessage(<span class="string">"greeting"</span>, <span class="keyword">new</span> String[]&#123;<span class="string">"hsoh"</span>&#125;, Locale.getDefault()));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="ApplicationEventPublisher"><a href="#ApplicationEventPublisher" class="headerlink" title="ApplicationEventPublisher"></a>ApplicationEventPublisher</h2><p>이벤트 프로그래밍에 필요한 인터페이스를 제공(옵저버 패턴의 구현체)</p>
+<ul>
+<li>ApplicationEventPublisher의 메소드 publishEvent(ApplicationEvent event)로 이벤트 발생</li>
+<li>4.2 이전에는  ApplicationEvent를 상속받아서 이벤트 구현</li>
+<li>이벤트를 발생시키고 EventListener를 등록하여 이벤트 처리</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppEvent</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> data;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Object source;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AppEvent</span><span class="params">(Object source, <span class="keyword">int</span> data)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.data = data;</span><br><span class="line">        <span class="keyword">this</span>.source = source;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">getSource</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> source;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getData</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> data;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppRunner</span> <span class="keyword">implements</span> <span class="title">ApplicationRunner</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ApplicationEventPublisher publisher;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(ApplicationArguments args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        publisher.publishEvent(<span class="keyword">new</span> AppEvent(<span class="keyword">this</span>, <span class="number">100</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppEventHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@EventListener</span></span><br><span class="line">    <span class="meta">@Async</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(AppEvent event)</span></span>&#123;</span><br><span class="line">        System.out.println(Thread.currentThread().toString());</span><br><span class="line">        System.out.println(<span class="string">"AppEventHandler = "</span> +event.getData());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>순서지정은 @Order로 지정</li>
+<li>비동기적 실행은 @Async 사용</li>
+</ul>
+<h2 id="ResourceLoader"><a href="#ResourceLoader" class="headerlink" title="ResourceLoader"></a>ResourceLoader</h2><p>리소스를 읽어오는 기능을 제공하는 인터페이스</p>
+<ul>
+<li>ResourceLoader의 getResource(java.lang.String location)로 리소스 조회</li>
+<li>다양한 방법으로 조회가능<ul>
+<li>파일 시스템에서 읽기</li>
+<li>클래스 패스에서 읽기</li>
+<li>URL로 읽기</li>
+<li>상대/절대 경로로 읽기</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppRunner</span> <span class="keyword">implements</span> <span class="title">ApplicationRunner</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ResourceLoader resourceLoader;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(ApplicationArguments args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Resource resource = resourceLoader.getResource(<span class="string">"classpath:text.txt"</span>);</span><br><span class="line">        System.out.println(resource.exists());</span><br><span class="line">        System.out.println(resource.getDescription());</span><br><span class="line">        Files.lines(Paths.get(resource.getURI())).forEach(System.out::println);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/Bean/">Bean</a> <a class="tag tag--primary tag--small t-link" href="/tags/IoC/">IoC</a> <a class="tag tag--primary tag--small t-link" href="/tags/java/">java</a> <a class="tag tag--primary tag--small t-link" href="/tags/spring-boot/">spring boot</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/16/spring-core-resource/" data-tooltip="Spring 핵심 기술 (Resource 추상화)" aria-label="PREVIOUS: Spring 핵심 기술 (Resource 추상화)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/05/spring-core-ioc-01/" data-tooltip="Spring 핵심 기술 (IoC, Bean - 01)" aria-label="NEXT: Spring 핵심 기술 (IoC, Bean - 01)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/06/spring-core-ioc-02/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/06/spring-core-ioc-02/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/06/spring-core-ioc-02/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/16/spring-core-resource/" data-tooltip="Spring 핵심 기술 (Resource 추상화)" aria-label="PREVIOUS: Spring 핵심 기술 (Resource 추상화)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/05/spring-core-ioc-01/" data-tooltip="Spring 핵심 기술 (IoC, Bean - 01)" aria-label="NEXT: Spring 핵심 기술 (IoC, Bean - 01)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/06/spring-core-ioc-02/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/06/spring-core-ioc-02/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/06/spring-core-ioc-02/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/06/spring-core-ioc-02/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/06/spring-core-ioc-02/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/06/spring-core-ioc-02/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

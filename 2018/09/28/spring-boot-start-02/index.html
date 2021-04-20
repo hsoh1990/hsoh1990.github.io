@@ -1,0 +1,569 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Spring Boot 정리(02) - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"Spring Boot를 이용한 REST API 서버를 만들기위해 의존성을 추가하고 그게 맞는 환경설정을 방법을 알아보겠습니다. Spring Boot Reference Guide를 참고하여 Spring Boot에서 제공하는 starter들과 Gradle을 사용하는 법을 정리하겠습니다.  \nSpring Boot  Gradle 사용법Spring Boot에서 Gradle 사용법은 13.3에 정의 되어 있습니다. \n문서에서 설명하듯 Maven에서는 부모 의존성를 받아 spring boot에서 사용하는 추가적인 의존성의 버전을 신경쓰지 않고 개발할 수 있습니다. \n123456&lt;!-- Inherit defaults from Spring Boot --&gt;&lt;parent&gt;    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;    &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;    &lt;version&gt;1.5.4.RELEASE&lt;/version&gt;&lt;/parent&gt;\nGradle에서는 dependencies섹션 에서 ‘starter’을 직접 가져올 수 있습니다 . Maven과는 달리 Gradle에서는 일부 구성을 공유하기 위해 가져올 수퍼 부모는 없습니다.\n1234567repositories &#123;    jcenter()&#125;dependencies &#123;    compile(\"org.springframework.boot:spring-boot-starter-web:1.5.4.RELEASE\")&#125;\nspring-boot-gradle-plugin도 사용할 수 있으며 실행 가능한 jar를 만들고 소스에서 프로젝트를 실행하는 작업을 제공합니다. 또한 다른 기능들 중에서도 스프링 부트에 의해 관리되는 모든 종속성의 버전 번호를 생략 할 수있는 종속성 관리를 제공합니다.\n1234567891011121314plugins &#123;    id 'org.springframework.boot' version '1.5.4.RELEASE'    id 'java'&#125;repositories &#123;    jcenter()&#125;dependencies &#123;    compile(\"org.springframework.boot:spring-boot-starter-web\")    testCompile(\"org.springframework.boot:spring-boot-starter-test\")&#125;\nSpring Boot application startersSpring Boot에는 다양한 starter들이 존재 합니다. 예를 들어 Spring Boot의 코어 기능을 가지는 spring-boot-starter가 있습니다. 또한 JPA를 사용하기 위한 spring-boot-starter-data-jpa또는 Spring Security 의존성을 가지는 spring-boot-starter-security 등등 다양한 starter들을 확인할 수 있습니다.\n\n\n\nName\nDescription\nPom\n\n\n\n\nspring-boot-starter\nCore starter, including auto-configuration support, logging and YAML\nPom\n\n\nspring-boot-starter-data-jpa\nStarter for using Spring Data JPA with Hibernate\nPom\n\n\nspring-boot-starter-security\nStarter for using Spring Security\nPom\n\n\nspring-boot-starter-social-facebook\nStarter for using Spring Social Facebook\nPom\n\n\nspring-boot-starter-test\nStarter for testing Spring Boot applications with libraries including JUnit, Hamcrest and Mockito\nPom\n\n\nspring-boot-starter-thymeleaf\nStarter for building MVC web applications using Thymeleaf views\nPom\n\n\nspring-boot-starter-validation\nStarter for using Java Bean Validation with Hibernate Validator\nPom\n\n\nspring-boot-starter-web\nStarter for building web, including RESTful, applications using Spring MVC. Uses Tomcat as the default embedded container\nPom\n\n\nspring-boot-starter-websocket\nStarter for building WebSocket applications using Spring Framework’s WebSocket support\nPom\n\n\n…\n…\n…\n\n\n\n모든 공식 starter는 spring-boot-starter- , 라는 비슷한 명명 패턴을 따릅니다. 이 명명 규칙은 starter를 찾아야 할 때 도움을 주기위한 것입니다. 많은 IDE의 Maven 통합을 통해 의존성을 이름으로 검색 할 수 있습니다. 개인적인 프로젝트에서는 spring-boot-starter- , 로 시작해서는 안됩니다. \nGradle PracticeSpring boot를 이용한 REST API 개발(01)에서 프로젝트를 생성했습니다. Intellij에서는 프로젝트를 생성하면 다음과 같이 기본적인 구조가 생성되며 API테스트를 위해 compile(&#39;org.springframework.boot:spring-boot-starter-web&#39;)를 추가 했습니다.\n1234567891011121314151617181920212223242526272829303132buildscript &#123;\text &#123;\t\tspringBootVersion = '1.5.15.RELEASE'\t&#125;\trepositories &#123;\t\tmavenCentral()\t&#125;\tdependencies &#123;\t\tclasspath(\"org.springframework.boot:spring-boot-gradle-plugin:$&#123;springBootVersion&#125;\")\t&#125;&#125;apply plugin: 'java'apply plugin: 'eclipse'apply plugin: 'idea'apply plugin: 'org.springframework.boot'group = 'com.ex'version = '0.0.1-SNAPSHOT'sourceCompatibility = 1.8repositories &#123;\tmavenCentral()&#125;dependencies &#123;\tcompile('org.springframework.boot:spring-boot-starter')\tcompile('org.springframework.boot:spring-boot-starter-web')\ttestCompile('org.springframework.boot:spring-boot-starter-test')&#125;\n이번에는 기본적으로 사용할 starter및 의존성을 추가해 보겠습니다. 추가할 의존성은 spring-boot-starter-security org.projectlombok:lombok입니다.\n123456789dependencies &#123;   compile('org.springframework.boot:spring-boot-starter-security')   compile('org.springframework.boot:spring-boot-starter-web')   compileOnly('org.projectlombok:lombok')   testCompile('org.springframework.boot:spring-boot-starter-test')   testCompile('org.springframework.security:spring-security-test')&#125;\n다음 Gradle이 빌드가 끝나면 의존성이 정상적으로 추가된것을 확인할 수 있습니다.\n\n다음 Intellij에서 lombok을 사용하기 위해서는 Build, Execution, Deployment -&gt;  Annotation Processors -&gt; Enable annotation processing을 체크해 줍니다.\n그럼 lombok을 테스트 하기위해 간단한 클래스를 만들고 ForBlogController에서 사용해 보겠습니다.\n12345678package com.ex.forblog;import lombok.Data;@Datapublic class TestLombok &#123;    private String str;&#125;\n12345678910@RestControllerpublic class ForBlogController &#123;    @GetMapping(value = \"/\")    String hello()&#123;        TestLombok testLombok = new TestLombok();        testLombok.setStr(\"Hello World!\");        return testLombok.getStr();    &#125;&#125;\n여기까지 진행한 후 Run하면 정상적으로 실행이 되지만 spring-boot-starter-security에 대한 설정이 없어 다음과 같은 에러 페이지가 나옵니다.\n123456Whitelabel Error PageThis application has no explicit mapping for /error, so you are seeing this as a fallback.Thu Oct 18 01:16:16 KST 2018There was an unexpected error (type=Unauthorized, status=401).Bad credentials\n현재는 보안은 그냥 넘어가도록 설정할 예정이며 추후에 OAuth2.0을 이용해 보겠습니다. spring-boot-starter-security에 대한 설정은 JAVA Config를 통해 진행 합니다.\n12345678910111213package com.ex.forblog.config;import org.springframework.context.annotation.Configuration;import org.springframework.security.config.annotation.web.builders.HttpSecurity;import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;@Configurationpublic class WebSecurityConfig extends WebSecurityConfigurerAdapter &#123;    @Override    protected void configure(final HttpSecurity http) throws Exception &#123;        http.authorizeRequests().antMatchers(\"*\").permitAll();    &#125;&#125;\n마지막으로 Spring Boot를 실행하면 기본 포트는 8080으로 설정되어 있습니다. 기본 포트를 변경하는 방법은 application.properties 혹은 application.yml에서 설정할 수 있고 지금 예제에서는 application.yml를 사용하여 9090 포트를 이용하겠습니다. 경로는 src/main/resources에 생성합니다.\n12server:  port: 9090\n이상으로 Gradle 사용 및 환경설정에 대해 알아봤습니다.\n감사합니다.\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2018-09-28T22:48:48+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2018-09-28T22:48:48+09:00","description":"Spring Boot를 이용한 REST API 서버를 만들기위해 의존성을 추가하고 그게 맞는 환경설정을 방법을 알아보겠습니다. Spring Boot Reference Guide를 참고하여 Spring Boot에서 제공하는 starter들과 Gradle을 사용하는 법을 정리하겠습니다.","headline":"Spring Boot 정리(02)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2018/09/28/spring-boot-start-02/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2018/09/28/spring-boot-start-02/","keywords":"java, spring boot, PostgreSQL, JPA, JUnit, lombok"}</script>
+    <meta name="description" content="Spring Boot를 이용한 REST API 서버를 만들기위해 의존성을 추가하고 그게 맞는 환경설정을 방법을 알아보겠습니다. Spring Boot Reference Guide를 참고하여 Spring Boot에서 제공하는 starter들과 Gradle을 사용하는 법을 정리하겠습니다.">
+<meta name="keywords" content="java,spring boot,PostgreSQL,JPA,JUnit,lombok">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Spring Boot 정리(02)">
+<meta property="og:url" content="http://yoursite.com/2018/09/28/spring-boot-start-02/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="Spring Boot를 이용한 REST API 서버를 만들기위해 의존성을 추가하고 그게 맞는 환경설정을 방법을 알아보겠습니다. Spring Boot Reference Guide를 참고하여 Spring Boot에서 제공하는 starter들과 Gradle을 사용하는 법을 정리하겠습니다.">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://user-images.githubusercontent.com/33083822/47100747-2a723580-d273-11e8-8d18-42bf26a3206c.png">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.746Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spring Boot 정리(02)">
+<meta name="twitter:description" content="Spring Boot를 이용한 REST API 서버를 만들기위해 의존성을 추가하고 그게 맞는 환경설정을 방법을 알아보겠습니다. Spring Boot Reference Guide를 참고하여 Spring Boot에서 제공하는 starter들과 Gradle을 사용하는 법을 정리하겠습니다.">
+<meta name="twitter:image" content="https://user-images.githubusercontent.com/33083822/47100747-2a723580-d273-11e8-8d18-42bf26a3206c.png">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Spring Boot 정리(02)
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2018-09-28T22:48:48+09:00">
+	
+		    Sep 28, 2018
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/Spring-Boot-정리/">Spring Boot 정리</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p><a href="http://spring.io/projects/spring-boot" target="_blank" rel="noopener">Spring Boot</a>를 이용한 REST API 서버를 만들기위해 의존성을 추가하고 그게 맞는 환경설정을 방법을 알아보겠습니다. <a href="https://docs.spring.io/spring-boot/docs/1.5.4.RELEASE/reference/htmlsingle/#getting-started" target="_blank" rel="noopener">Spring Boot Reference Guide</a>를 참고하여 Spring Boot에서 제공하는 starter들과 Gradle을 사용하는 법을 정리하겠습니다.<br><a id="more"></a>  </p>
+<h2 id="Spring-Boot-Gradle-사용법"><a href="#Spring-Boot-Gradle-사용법" class="headerlink" title="Spring Boot  Gradle 사용법"></a>Spring Boot  Gradle 사용법</h2><p>Spring Boot에서 Gradle 사용법은 <a href="https://docs.spring.io/spring-boot/docs/1.5.4.RELEASE/reference/htmlsingle/#using-boot-gradle" target="_blank" rel="noopener">13.3</a>에 정의 되어 있습니다. </p>
+<p>문서에서 설명하듯 Maven에서는 부모 의존성를 받아 spring boot에서 사용하는 추가적인 의존성의 버전을 신경쓰지 않고 개발할 수 있습니다. </p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- Inherit defaults from Spring Boot --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">parent</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-parent<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.5.4.RELEASE<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">parent</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>Gradle에서는 <code>dependencies</code>섹션 에서 ‘starter’을 직접 가져올 수 있습니다 . Maven과는 달리 Gradle에서는 일부 구성을 공유하기 위해 가져올 수퍼 부모는 없습니다.</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">repositories &#123;</span><br><span class="line">    jcenter()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">dependencies &#123;</span><br><span class="line">    compile(<span class="string">"org.springframework.boot:spring-boot-starter-web:1.5.4.RELEASE"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><a href="https://docs.spring.io/spring-boot/docs/1.5.4.RELEASE/reference/htmlsingle/#build-tool-plugins-gradle-plugin" target="_blank" rel="noopener"><code>spring-boot-gradle-plugin</code></a>도 사용할 수 있으며 실행 가능한 jar를 만들고 소스에서 프로젝트를 실행하는 작업을 제공합니다. 또한 다른 기능들 중에서도 스프링 부트에 의해 관리되는 모든 종속성의 버전 번호를 생략 할 수있는 종속성 관리를 제공합니다.</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">plugins &#123;</span><br><span class="line">    id <span class="string">'org.springframework.boot'</span> version <span class="string">'1.5.4.RELEASE'</span></span><br><span class="line">    id <span class="string">'java'</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">repositories &#123;</span><br><span class="line">    jcenter()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">dependencies &#123;</span><br><span class="line">    compile(<span class="string">"org.springframework.boot:spring-boot-starter-web"</span>)</span><br><span class="line">    testCompile(<span class="string">"org.springframework.boot:spring-boot-starter-test"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Spring-Boot-application-starters"><a href="#Spring-Boot-application-starters" class="headerlink" title="Spring Boot application starters"></a>Spring Boot application starters</h2><p>Spring Boot에는 다양한 <a href="https://docs.spring.io/spring-boot/docs/1.5.4.RELEASE/reference/htmlsingle/#using-boot-starter" target="_blank" rel="noopener">starter</a>들이 존재 합니다. 예를 들어 Spring Boot의 코어 기능을 가지는 <code>spring-boot-starter</code>가 있습니다. 또한 JPA를 사용하기 위한 <code>spring-boot-starter-data-jpa</code>또는 Spring Security 의존성을 가지는 <code>spring-boot-starter-security</code> 등등 다양한 starter들을 확인할 수 있습니다.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Pom</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spring-boot-starter</code></td>
+<td>Core starter, including auto-configuration support, logging and YAML</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-data-jpa</code></td>
+<td>Starter for using Spring Data JPA with Hibernate</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-data-jpa/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-security</code></td>
+<td>Starter for using Spring Security</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-security/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-social-facebook</code></td>
+<td>Starter for using Spring Social Facebook</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-social-facebook/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-test</code></td>
+<td>Starter for testing Spring Boot applications with libraries including JUnit, Hamcrest and Mockito</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-test/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-thymeleaf</code></td>
+<td>Starter for building MVC web applications using Thymeleaf views</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-thymeleaf/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-validation</code></td>
+<td>Starter for using Java Bean Validation with Hibernate Validator</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-validation/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-web</code></td>
+<td>Starter for building web, including RESTful, applications using Spring MVC. Uses Tomcat as the default embedded container</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-web/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td><code>spring-boot-starter-websocket</code></td>
+<td>Starter for building WebSocket applications using Spring Framework’s WebSocket support</td>
+<td><a href="https://github.com/spring-projects/spring-boot/tree/v1.5.4.RELEASE/spring-boot-starters/spring-boot-starter-websocket/pom.xml" target="_blank" rel="noopener">Pom</a></td>
+</tr>
+<tr>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+</tr>
+</tbody>
+</table>
+<p>모든 공식 starter는 spring-boot-starter- <em>, </em>라는 비슷한 명명 패턴을 따릅니다. 이 명명 규칙은 starter를 찾아야 할 때 도움을 주기위한 것입니다. 많은 IDE의 Maven 통합을 통해 의존성을 이름으로 검색 할 수 있습니다. 개인적인 프로젝트에서는 spring-boot-starter- <em>, </em>로 시작해서는 안됩니다. </p>
+<h2 id="Gradle-Practice"><a href="#Gradle-Practice" class="headerlink" title="Gradle Practice"></a>Gradle Practice</h2><p><a href="https://hsoh1990.github.io/2018/08/30/spring-boot-start-01/" target="_blank" rel="noopener">Spring boot를 이용한 REST API 개발(01)</a>에서 프로젝트를 생성했습니다. Intellij에서는 프로젝트를 생성하면 다음과 같이 기본적인 구조가 생성되며 API테스트를 위해 <code>compile(&#39;org.springframework.boot:spring-boot-starter-web&#39;)</code>를 추가 했습니다.</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">buildscript &#123;</span><br><span class="line">	ext &#123;</span><br><span class="line">		springBootVersion = <span class="string">'1.5.15.RELEASE'</span></span><br><span class="line">	&#125;</span><br><span class="line">	repositories &#123;</span><br><span class="line">		mavenCentral()</span><br><span class="line">	&#125;</span><br><span class="line">	dependencies &#123;</span><br><span class="line">		classpath(<span class="string">"org.springframework.boot:spring-boot-gradle-plugin:$&#123;springBootVersion&#125;"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'java'</span></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'eclipse'</span></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'idea'</span></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'org.springframework.boot'</span></span><br><span class="line"></span><br><span class="line">group = <span class="string">'com.ex'</span></span><br><span class="line">version = <span class="string">'0.0.1-SNAPSHOT'</span></span><br><span class="line">sourceCompatibility = <span class="number">1.8</span></span><br><span class="line"></span><br><span class="line">repositories &#123;</span><br><span class="line">	mavenCentral()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">dependencies &#123;</span><br><span class="line">	compile(<span class="string">'org.springframework.boot:spring-boot-starter'</span>)</span><br><span class="line">	compile(<span class="string">'org.springframework.boot:spring-boot-starter-web'</span>)</span><br><span class="line"></span><br><span class="line">	testCompile(<span class="string">'org.springframework.boot:spring-boot-starter-test'</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>이번에는 기본적으로 사용할 starter및 의존성을 추가해 보겠습니다. 추가할 의존성은 <code>spring-boot-starter-security</code> <code>org.projectlombok:lombok</code>입니다.</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">   compile(<span class="string">'org.springframework.boot:spring-boot-starter-security'</span>)</span><br><span class="line">   compile(<span class="string">'org.springframework.boot:spring-boot-starter-web'</span>)</span><br><span class="line"></span><br><span class="line">   compileOnly(<span class="string">'org.projectlombok:lombok'</span>)</span><br><span class="line"></span><br><span class="line">   testCompile(<span class="string">'org.springframework.boot:spring-boot-starter-test'</span>)</span><br><span class="line">   testCompile(<span class="string">'org.springframework.security:spring-security-test'</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>다음 Gradle이 빌드가 끝나면 의존성이 정상적으로 추가된것을 확인할 수 있습니다.</p>
+<p><img src="https://user-images.githubusercontent.com/33083822/47100747-2a723580-d273-11e8-8d18-42bf26a3206c.png" alt="springboot01"></p>
+<p>다음 Intellij에서 lombok을 사용하기 위해서는 <code>Build, Execution, Deployment</code> -&gt;  <code>Annotation Processors</code> -&gt; <code>Enable annotation processing</code>을 체크해 줍니다.</p>
+<p>그럼 lombok을 테스트 하기위해 간단한 클래스를 만들고 ForBlogController에서 사용해 보겠습니다.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> lombok.Data;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Data</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestLombok</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String str;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ForBlogController</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@GetMapping</span>(value = <span class="string">"/"</span>)</span><br><span class="line">    <span class="function">String <span class="title">hello</span><span class="params">()</span></span>&#123;</span><br><span class="line">        TestLombok testLombok = <span class="keyword">new</span> TestLombok();</span><br><span class="line">        testLombok.setStr(<span class="string">"Hello World!"</span>);</span><br><span class="line">        <span class="keyword">return</span> testLombok.getStr();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>여기까지 진행한 후 Run하면 정상적으로 실행이 되지만 <code>spring-boot-starter-security</code>에 대한 설정이 없어 다음과 같은 에러 페이지가 나옵니다.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Whitelabel Error Page</span><br><span class="line">This application has no explicit mapping for /error, so you are seeing this as a fallback.</span><br><span class="line"></span><br><span class="line">Thu Oct 18 01:16:16 KST 2018</span><br><span class="line">There was an unexpected error (type=Unauthorized, status=401).</span><br><span class="line">Bad credentials</span><br></pre></td></tr></table></figure>
+<p>현재는 보안은 그냥 넘어가도록 설정할 예정이며 추후에 OAuth2.0을 이용해 보겠습니다. <code>spring-boot-starter-security</code>에 대한 설정은 JAVA Config를 통해 진행 합니다.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.config;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.Configuration;</span><br><span class="line"><span class="keyword">import</span> org.springframework.security.config.annotation.web.builders.HttpSecurity;</span><br><span class="line"><span class="keyword">import</span> org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebSecurityConfig</span> <span class="keyword">extends</span> <span class="title">WebSecurityConfigurerAdapter</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">configure</span><span class="params">(<span class="keyword">final</span> HttpSecurity http)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        http.authorizeRequests().antMatchers(<span class="string">"*"</span>).permitAll();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>마지막으로 Spring Boot를 실행하면 기본 포트는 8080으로 설정되어 있습니다. 기본 포트를 변경하는 방법은 application.properties 혹은 application.yml에서 설정할 수 있고 지금 예제에서는 application.yml를 사용하여 9090 포트를 이용하겠습니다. 경로는 <code>src/main/resources</code>에 생성합니다.</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">server:</span></span><br><span class="line">  <span class="attr">port:</span> <span class="number">9090</span></span><br></pre></td></tr></table></figure>
+<p>이상으로 Gradle 사용 및 환경설정에 대해 알아봤습니다.</p>
+<p>감사합니다.</p>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/JPA/">JPA</a> <a class="tag tag--primary tag--small t-link" href="/tags/JUnit/">JUnit</a> <a class="tag tag--primary tag--small t-link" href="/tags/PostgreSQL/">PostgreSQL</a> <a class="tag tag--primary tag--small t-link" href="/tags/java/">java</a> <a class="tag tag--primary tag--small t-link" href="/tags/lombok/">lombok</a> <a class="tag tag--primary tag--small t-link" href="/tags/spring-boot/">spring boot</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/12/07/spring-boot-start-03/" data-tooltip="Spring Boot 정리(03)" aria-label="PREVIOUS: Spring Boot 정리(03)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/08/30/spring-boot-start-01/" data-tooltip="Spring Boot 정리(01)" aria-label="NEXT: Spring Boot 정리(01)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/09/28/spring-boot-start-02/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2018/09/28/spring-boot-start-02/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2018/09/28/spring-boot-start-02/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/12/07/spring-boot-start-03/" data-tooltip="Spring Boot 정리(03)" aria-label="PREVIOUS: Spring Boot 정리(03)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/08/30/spring-boot-start-01/" data-tooltip="Spring Boot 정리(01)" aria-label="NEXT: Spring Boot 정리(01)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/09/28/spring-boot-start-02/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2018/09/28/spring-boot-start-02/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2018/09/28/spring-boot-start-02/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/09/28/spring-boot-start-02/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2018/09/28/spring-boot-start-02/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2018/09/28/spring-boot-start-02/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

@@ -1,0 +1,564 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Spring Boot 정리(03) - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"Spring Boot를 이용한 RESTful API 개발 3번째 입니다. 이번에는 요구사항을 정의한 후 Account 도메인을 통해 CRUD 로직을 만들어 보겠습니다.  \nGradle 설정먼저  dependenccy를 설정하기 위해 build.gradle을 확인하겠습니다. Spring boot를 이용한 REST API 개발(02)에서 설정을 했다면 다음과 같습니다.\n123456789101112131415161718192021222324252627282930313233343536buildscript &#123;\text &#123;\t\tspringBootVersion = '1.5.15.RELEASE'\t&#125;\trepositories &#123;\t\tmavenCentral()\t&#125;\tdependencies &#123;\t\tclasspath(\"org.springframework.boot:spring-boot-gradle-plugin:$&#123;springBootVersion&#125;\")\t&#125;&#125;apply plugin: 'java'apply plugin: 'eclipse'apply plugin: 'idea'apply plugin: 'org.springframework.boot'group = 'com.ex'version = '0.0.1-SNAPSHOT'sourceCompatibility = 1.8repositories &#123;\tmavenCentral()&#125;dependencies &#123;\tcompile('org.springframework.boot:spring-boot-starter-security')\tcompile('org.springframework.boot:spring-boot-starter-web')    compile('org.modelmapper:modelmapper:0.7.5')    compileOnly('org.projectlombok:lombok')\ttestCompile('org.springframework.boot:spring-boot-starter-test')\ttestCompile('org.springframework.security:spring-security-test')&#125;\nTEST 코드 작성spring boot에서 테스트는 src/test/java/packagename/..에 @SpringBootTest를 사용해 작성합니다.AccountControllerTest Class를 사용하여 기본 틀을 작성하면 다음과 같습니다.\n123456789101112131415161718192021222324@RunWith(SpringRunner.class)@SpringBootTestpublic class AccountControllerTest &#123;    @Autowired    private WebApplicationContext webApplicationContext;    @Autowired    AccountService accountService;    private MockMvc mockMvc;    private AccountDto.AccountRegistDto registerAccountDto;    private ObjectMapper mapper = new ObjectMapper();    @Before    public void setup() &#123;        this.mockMvc = MockMvcBuilders                .webAppContextSetup(webApplicationContext)                .apply(springSecurity())                .alwaysDo(print())                .build();    &#125;&#125;\n현재 만들지 않은 Class도 있지만 그대로 진행합니다. 필요한 Class는 진행하면서 구현하도록 하며, 코드에 대한 설명을 추후에 하나씩 살펴보도록 하고 일딴 개발을 진행해 보겠습니다.  \nAccount 도메인 CRUD 명세 정의다음 개발에 앞서 Test코드를 작성하기 위한 명세를 정의하겠습니다.\n\n계정 등록\n계정은 name, password, email을 입력하여 등록한다\n등록이 정상적으로 수행되면 id, name, password, email를 가지는 데이터를 저장한다.\n등록이 정상적으로 수행되면 201 상태코드와 password를 제외한 계정정보를 반환한다.\n등록 시 name, password, email 중 하나라도 없으면 400에러를 반환한다.\n\n\n계정 리스트 조회\n조회가 정상적으로 수행되면 200 상태코드와  password를 제외한 계정 리스트를 반환한다. \n\n\nid를 이용하여 계정 조회\n특정 id로 조회가 정상적으로 수행되면 200 상태코드와 password를 제외한 계정정보를 반환한다.\n특정 id에 해당하는 계정이 없으면 400에러를 반환하며, 조회한 id를 반환한다.\n\n\nid를 이용하여 계정 정보 수정\n특정 id로 수정이 정상적으로 수행되면 200 상태코드와 password를 제외한 계정정보를 반환한다.\n특정 id에 해당하는 계정이 없으면 400에러를 반환하며, 조회한 id를 반환한다.\n\n\nid를 이용하여 계정 삭제\n특정 id로 수정이 정상적으로 수행되면 200 상태코드와 password를 제외한 계정정보를 반환한다.\n특정 id에 해당하는 계정이 없으면 400에러를 반환하며, 조회한 id를 반환한다.\n\n\n\n계정 등록등록 성공먼저 명세에 정의된 내용을 Test 코드로 옮겨 보겠습니다. 테스트는 given, when, then 순서로 특정 상황(given)에서 특정 API로 요청했습때(when) 원하는 결과가 리턴(then)되는지 확인하는 방식으로 진행합니다.\n123456789101112131415161718192021/** * 계정을 등록한다 * id:1, name:hsoh, password:password, email:hsoh@gmail.com * 성공적으로 등록되면 201 상태코드를 반환한다. * 성공적으로 등록되면 등록한 계정정보가 반환된다. */@Testpublic void registAccount() throws Exception &#123;    // Given    // When    final ResultActions resultActions = mockMvc.perform(            post(\"/accounts\").contentType(MediaType.APPLICATION_JSON)                    .content(mapper.writeValueAsString(this.registerAccountDto))                    .with(csrf()));    // Then    resultActions.andExpect(status().isCreated())            .andExpect(jsonPath(\"$.name\").value(\"hsoh\"))            .andExpect(jsonPath(\"$.email\").value(\"hsoh@gmail.com\"));&#125;\n다음과 같이 Test 코드를 작성 했하고 실행해보면 구현되지 않은 내용이기 때문에 에러가 발생됩니다. 이제 다시 코드로 돌아가 구현해 보겠습니다.\n먼저 account package를 생성하고 Account 도메인을 정의 합니다. \n123456789101112131415161718package com.ex.forblog.account;@Dataclass Account &#123;    Account(String name, String password, String email) &#123;        this.name = name;        this.password = password;        this.email = email;    &#125;    private int id;    private String name;    private String password;    private String email;&#125;\n다음 /accounts요청을 처리할 controller, service, repository, dto를 생성합니다.\n\nAccountController\n\n12345678910111213141516171819package com.ex.forblog.account;@RestController@RequestMapping(\"/accounts\")public class AccountController &#123;    @Autowired    private AccountService accountService;    @Autowired    ModelMapper modelMapper;    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)    public ResponseEntity registAccount(@RequestBody final AccountRegistDto accountDto) &#123;        Account account = accountService.register(accountDto);        AccountResponseDto accountResponseDto = modelMapper.map(account, AccountResponseDto.class);        return new ResponseEntity&lt;&gt;(accountResponseDto, HttpStatus.CREATED);    &#125;&#125;\n\nAccountService\n\n123456789101112131415package com.ex.forblog.account;@Servicepublic class AccountService &#123;    @Autowired    private AccountRepository accountRepository;    @Autowired    ModelMapper modelMapper;    public Account register(AccountRegistDto accountDto) &#123;        Account account = modelMapper.map(accountDto, Account.class);        return accountRepository.save(account);    &#125;&#125;\n\nAccountRepository\n\n12345678910111213141516171819202122232425package com.ex.forblog.account;@Repositorypublic class AccountRepository &#123;    private List&lt;Account&gt; accounts = new ArrayList&lt;Account&gt;();    private int accountId;    AccountRepository() &#123;        accountId = 1;    &#125;    public Account save(Account account) &#123;        if (account.getId() == 0)&#123;            account.setId(accounts.size()+1);            accounts.add(account);            accountId += 1;        &#125; else &#123;            accounts.set(account.getId()-1, account);        &#125;        return account;    &#125;&#125;\n\nAccountDto.AccountRegistDto, AccountDto.AccountResponseDto\n\n12345678910111213141516171819202122232425package com.ex.forblog.account;@SuppressWarnings(\"squid:S1118\")@NoArgsConstructor(access = AccessLevel.PRIVATE)public class AccountDto &#123;    @Data    @Builder    @AllArgsConstructor    @NoArgsConstructor    public static class AccountRegistDto &#123;        private String name;        private String password;        private String email;    &#125;        @Data    @Builder    @AllArgsConstructor    @NoArgsConstructor    public static class AccountResponseDto &#123;        private int id;        private String name;        private String email;    &#125;&#125;\n다음 다시 테스트를 돌려보면 역시 에러… 이번에는 ModelMapper가 없어서 그렇습니다. @Bean를 등록해보죠.\n\nForBlogApplication\n\n12345678910@SpringBootApplicationpublic class ForBlogApplication &#123;    ...            @Bean    public ModelMapper modelMapper() &#123;        return new ModelMapper();    &#125;&#125;\n다시 테스트 코드 실해하면 녹색으로 처리된 테스트 코드를 만날 수 있습니다.\n등록 실패테스트는 등록에 실패하느 경우도 생각해야합니다. 등록에 실패하는 경우에는 어떤 처리를 해야하는지 어떤 동작을 해야하는지 명세에 정의되어 있고 그대로 동작하는지 확인하기 위해 다음과 같은 Test 코드를 작성 했습니다.\n12345678910111213141516171819/** * name, password, email 필드중 하나라도 없으면 등록하면 실패한다. * 404 상태코드를 반환한다. */@Testpublic void registAccountBadRequest() throws Exception &#123;    //Given    this.registerAccountDto.setName(\" \");    this.registerAccountDto.setPassword(\"1234\");    //When    final ResultActions resultActions = mockMvc.perform(            post(\"/accounts\").contentType(MediaType.APPLICATION_JSON)                    .content(mapper.writeValueAsString(this.registerAccountDto))                    .with(csrf()));    //Then    resultActions.andExpect(status().isBadRequest());&#125;\n이번에 테스트를 실행시켜보면 역시 에러를 만날 수 있습니다. 잘못된 요청에 대한 처리를 하지 않았기때문이죠.\n그럼 코드를 다시 수정해 보겠습니다. 저는 Spring에서 제공하는 @Valid를 사용하여 요청 데이터의 유효성 검사를 진행하겠습니다.\n\nAccountController\n\n123456789101112131415161718192021222324package com.ex.forblog.account;@RestController@RequestMapping(\"/accounts\")public class AccountController &#123;    @Autowired    private AccountService accountService;    @Autowired    ModelMapper modelMapper;    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)    public ResponseEntity registAccount(@RequestBody @Valid final AccountRegistDto accountDto,                                        final BindingResult result) &#123;        if (result.hasErrors()) &#123;            return new ResponseEntity&lt;&gt;(result.getFieldErrors(), HttpStatus.BAD_REQUEST);        &#125;        Account account = accountService.register(accountDto);        AccountResponseDto accountResponseDto = modelMapper.map(account, AccountResponseDto.class);        return new ResponseEntity&lt;&gt;(accountResponseDto, HttpStatus.CREATED);    &#125;&#125;\nAccountController의 registAccount함수에서 AccountRegistDto앞에 @Valid를 사용하면 AccountRegistDto에서 정의된 유효성 검사를 진행합니다. 그럼 AccountRegistDto로 이동하여 어떤 유효성을 검사하는지 정의해 보죠\n\nAccountDto.AccountRegistDto, AccountDto.AccountResponseDto\n\n12345678910111213141516171819202122232425262728package com.ex.forblog.account;@SuppressWarnings(\"squid:S1118\")@NoArgsConstructor(access = AccessLevel.PRIVATE)public class AccountDto &#123;    @Data    @Builder    @AllArgsConstructor    @NoArgsConstructor    public static class AccountRegistDto &#123;        @NotBlank        private String name;        @NotBlank        private String password;        @NotBlank        private String email;    &#125;        @Data    @Builder    @AllArgsConstructor    @NoArgsConstructor    public static class AccountResponseDto &#123;        private int id;        private String name;        private String email;    &#125;&#125;\n@NotBlank가 생겼습니다. 해당 필드가 비어있으면 에러를 발생시킵니다. 유효성 검사는 @Min, @Max, @NotBlank 등 다양한 어노테이션들이 있으니 확인해 보세요.\n이와 같은 방법으로 위에 정의한 요구사항들을 구현해보세요. 구현한 내용을 여기에 있습니다.\n에러처리추가적으로 spring으로 개발하다보면 위와 같이 에러처리를 해야합니다. 이걸 각 함수마다 따로 정의를 하다보면 중복되는 에러처리가 발생합니다. @ExceptionHandler를 통해 이런 중복된 코드 줄이겠습니다. \n\nAccountController\n\n1234567891011121314package com.ex.forblog.account;@RestController@RequestMapping(\"/accounts\")public class AccountController &#123;\t...    @ExceptionHandler(value = NotFoundException.class)    public ResponseEntity accountNotfoundException(NotFoundException e) &#123;        ExceptionDto exceptionDto = new ExceptionDto();        exceptionDto.setMessage(\"id가 \" + e.getMessage() + \"인 계정이 없습니다.\");        return new ResponseEntity&lt;&gt;(exceptionDto, HttpStatus.BAD_REQUEST);    &#125;&#125;\n해당 코드는 NotFoundException이 발생하면 처리합니다.\n마치며이상으로  글재주가 없다는걸 다시한번 느끼면서 account CRUD에 대한 정리를 마치겠습니다. 다음에는 JPA를 사용하여 DB(Postgresql)와 연동해 보겠습니다.\n감사합니다.\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2018-12-07T23:07:31+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2018-12-07T23:07:31+09:00","description":"Spring Boot를 이용한 RESTful API 개발 3번째 입니다. 이번에는 요구사항을 정의한 후 Account 도메인을 통해 CRUD 로직을 만들어 보겠습니다.","headline":"Spring Boot 정리(03)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2018/12/07/spring-boot-start-03/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2018/12/07/spring-boot-start-03/","keywords":"java, spring boot, PostgreSQL, JPA, JUnit, lombok"}</script>
+    <meta name="description" content="Spring Boot를 이용한 RESTful API 개발 3번째 입니다. 이번에는 요구사항을 정의한 후 Account 도메인을 통해 CRUD 로직을 만들어 보겠습니다.">
+<meta name="keywords" content="java,spring boot,PostgreSQL,JPA,JUnit,lombok">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Spring Boot 정리(03)">
+<meta property="og:url" content="http://yoursite.com/2018/12/07/spring-boot-start-03/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="Spring Boot를 이용한 RESTful API 개발 3번째 입니다. 이번에는 요구사항을 정의한 후 Account 도메인을 통해 CRUD 로직을 만들어 보겠습니다.">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.746Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spring Boot 정리(03)">
+<meta name="twitter:description" content="Spring Boot를 이용한 RESTful API 개발 3번째 입니다. 이번에는 요구사항을 정의한 후 Account 도메인을 통해 CRUD 로직을 만들어 보겠습니다.">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Spring Boot 정리(03)
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2018-12-07T23:07:31+09:00">
+	
+		    Dec 07, 2018
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/Spring-Boot-정리/">Spring Boot 정리</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p><a href="http://spring.io/projects/spring-boot" target="_blank" rel="noopener">Spring Boot</a>를 이용한 RESTful API 개발 3번째 입니다. 이번에는 요구사항을 정의한 후 Account 도메인을 통해 CRUD 로직을 만들어 보겠습니다.<br><a id="more"></a>  </p>
+<h2 id="Gradle-설정"><a href="#Gradle-설정" class="headerlink" title="Gradle 설정"></a>Gradle 설정</h2><p>먼저  dependenccy를 설정하기 위해 build.gradle을 확인하겠습니다. <a href="https://hsoh1990.github.io/2018/08/30/spring-boot-start-02/" target="_blank" rel="noopener">Spring boot를 이용한 REST API 개발(02)</a>에서 설정을 했다면 다음과 같습니다.</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">buildscript &#123;</span><br><span class="line">	ext &#123;</span><br><span class="line">		springBootVersion = <span class="string">'1.5.15.RELEASE'</span></span><br><span class="line">	&#125;</span><br><span class="line">	repositories &#123;</span><br><span class="line">		mavenCentral()</span><br><span class="line">	&#125;</span><br><span class="line">	dependencies &#123;</span><br><span class="line">		classpath(<span class="string">"org.springframework.boot:spring-boot-gradle-plugin:$&#123;springBootVersion&#125;"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'java'</span></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'eclipse'</span></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'idea'</span></span><br><span class="line">apply <span class="string">plugin:</span> <span class="string">'org.springframework.boot'</span></span><br><span class="line"></span><br><span class="line">group = <span class="string">'com.ex'</span></span><br><span class="line">version = <span class="string">'0.0.1-SNAPSHOT'</span></span><br><span class="line">sourceCompatibility = <span class="number">1.8</span></span><br><span class="line"></span><br><span class="line">repositories &#123;</span><br><span class="line">	mavenCentral()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">dependencies &#123;</span><br><span class="line">	compile(<span class="string">'org.springframework.boot:spring-boot-starter-security'</span>)</span><br><span class="line">	compile(<span class="string">'org.springframework.boot:spring-boot-starter-web'</span>)</span><br><span class="line">    compile(<span class="string">'org.modelmapper:modelmapper:0.7.5'</span>)</span><br><span class="line"></span><br><span class="line">    compileOnly(<span class="string">'org.projectlombok:lombok'</span>)</span><br><span class="line"></span><br><span class="line">	testCompile(<span class="string">'org.springframework.boot:spring-boot-starter-test'</span>)</span><br><span class="line">	testCompile(<span class="string">'org.springframework.security:spring-security-test'</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="TEST-코드-작성"><a href="#TEST-코드-작성" class="headerlink" title="TEST 코드 작성"></a>TEST 코드 작성</h2><p>spring boot에서 테스트는 <code>src/test/java/packagename/..</code>에 <code>@SpringBootTest</code>를 사용해 작성합니다.<code>AccountControllerTest</code> Class를 사용하여 기본 틀을 작성하면 다음과 같습니다.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RunWith</span>(SpringRunner<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">@<span class="title">SpringBootTest</span></span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">class</span> <span class="title">AccountControllerTest</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> WebApplicationContext webApplicationContext;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    AccountService accountService;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> MockMvc mockMvc;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> AccountDto.AccountRegistDto registerAccountDto;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> ObjectMapper mapper = <span class="keyword">new</span> ObjectMapper();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Before</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setup</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.mockMvc = MockMvcBuilders</span><br><span class="line">                .webAppContextSetup(webApplicationContext)</span><br><span class="line">                .apply(springSecurity())</span><br><span class="line">                .alwaysDo(print())</span><br><span class="line">                .build();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>현재 만들지 않은 Class도 있지만 그대로 진행합니다. 필요한 Class는 진행하면서 구현하도록 하며, 코드에 대한 설명을 추후에 하나씩 살펴보도록 하고 일딴 개발을 진행해 보겠습니다.  </p>
+<h2 id="Account-도메인-CRUD-명세-정의"><a href="#Account-도메인-CRUD-명세-정의" class="headerlink" title="Account 도메인 CRUD 명세 정의"></a>Account 도메인 CRUD 명세 정의</h2><p>다음 개발에 앞서 Test코드를 작성하기 위한 명세를 정의하겠습니다.</p>
+<ol>
+<li>계정 등록<ul>
+<li>계정은 name, password, email을 입력하여 등록한다</li>
+<li>등록이 정상적으로 수행되면 id, name, password, email를 가지는 데이터를 저장한다.</li>
+<li>등록이 정상적으로 수행되면 201 상태코드와 password를 제외한 계정정보를 반환한다.</li>
+<li>등록 시 name, password, email 중 하나라도 없으면 400에러를 반환한다.</li>
+</ul>
+</li>
+<li>계정 리스트 조회<ul>
+<li>조회가 정상적으로 수행되면 200 상태코드와  password를 제외한 계정 리스트를 반환한다. </li>
+</ul>
+</li>
+<li>id를 이용하여 계정 조회<ul>
+<li>특정 id로 조회가 정상적으로 수행되면 200 상태코드와 password를 제외한 계정정보를 반환한다.</li>
+<li>특정 id에 해당하는 계정이 없으면 400에러를 반환하며, 조회한 id를 반환한다.</li>
+</ul>
+</li>
+<li>id를 이용하여 계정 정보 수정<ul>
+<li>특정 id로 수정이 정상적으로 수행되면 200 상태코드와 password를 제외한 계정정보를 반환한다.</li>
+<li>특정 id에 해당하는 계정이 없으면 400에러를 반환하며, 조회한 id를 반환한다.</li>
+</ul>
+</li>
+<li>id를 이용하여 계정 삭제<ul>
+<li>특정 id로 수정이 정상적으로 수행되면 200 상태코드와 password를 제외한 계정정보를 반환한다.</li>
+<li>특정 id에 해당하는 계정이 없으면 400에러를 반환하며, 조회한 id를 반환한다.</li>
+</ul>
+</li>
+</ol>
+<h2 id="계정-등록"><a href="#계정-등록" class="headerlink" title="계정 등록"></a>계정 등록</h2><h3 id="등록-성공"><a href="#등록-성공" class="headerlink" title="등록 성공"></a>등록 성공</h3><p>먼저 명세에 정의된 내용을 Test 코드로 옮겨 보겠습니다. 테스트는 given, when, then 순서로 특정 상황(given)에서 특정 API로 요청했습때(when) 원하는 결과가 리턴(then)되는지 확인하는 방식으로 진행합니다.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 계정을 등록한다</span></span><br><span class="line"><span class="comment"> * id:1, name:hsoh, password:password, email:hsoh@gmail.com</span></span><br><span class="line"><span class="comment"> * 성공적으로 등록되면 201 상태코드를 반환한다.</span></span><br><span class="line"><span class="comment"> * 성공적으로 등록되면 등록한 계정정보가 반환된다.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registAccount</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="comment">// Given</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// When</span></span><br><span class="line">    <span class="keyword">final</span> ResultActions resultActions = mockMvc.perform(</span><br><span class="line">            post(<span class="string">"/accounts"</span>).contentType(MediaType.APPLICATION_JSON)</span><br><span class="line">                    .content(mapper.writeValueAsString(<span class="keyword">this</span>.registerAccountDto))</span><br><span class="line">                    .with(csrf()));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Then</span></span><br><span class="line">    resultActions.andExpect(status().isCreated())</span><br><span class="line">            .andExpect(jsonPath(<span class="string">"$.name"</span>).value(<span class="string">"hsoh"</span>))</span><br><span class="line">            .andExpect(jsonPath(<span class="string">"$.email"</span>).value(<span class="string">"hsoh@gmail.com"</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>다음과 같이 Test 코드를 작성 했하고 실행해보면 구현되지 않은 내용이기 때문에 에러가 발생됩니다. 이제 다시 코드로 돌아가 구현해 보겠습니다.</p>
+<p>먼저 account package를 생성하고 Account 도메인을 정의 합니다. </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Data</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Account</span> </span>&#123;</span><br><span class="line">    Account(String name, String password, String email) &#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">        <span class="keyword">this</span>.password = password;</span><br><span class="line">        <span class="keyword">this</span>.email = email;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> id;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String password;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String email;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>다음 <code>/accounts</code>요청을 처리할 controller, service, repository, dto를 생성합니다.</p>
+<ul>
+<li>AccountController</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(<span class="string">"/accounts"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountController</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> AccountService accountService;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ModelMapper modelMapper;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@PostMapping</span>(produces = MediaType.APPLICATION_JSON_VALUE)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ResponseEntity <span class="title">registAccount</span><span class="params">(@RequestBody <span class="keyword">final</span> AccountRegistDto accountDto)</span> </span>&#123;</span><br><span class="line">        Account account = accountService.register(accountDto);</span><br><span class="line">        AccountResponseDto accountResponseDto = modelMapper.map(account, AccountResponseDto<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ResponseEntity&lt;&gt;(accountResponseDto, HttpStatus.CREATED);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>AccountService</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> AccountRepository accountRepository;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ModelMapper modelMapper;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Account <span class="title">register</span><span class="params">(AccountRegistDto accountDto)</span> </span>&#123;</span><br><span class="line">        Account account = modelMapper.map(accountDto, Account<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        <span class="keyword">return</span> accountRepository.save(account);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>AccountRepository</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Repository</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountRepository</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> List&lt;Account&gt; accounts = <span class="keyword">new</span> ArrayList&lt;Account&gt;();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> accountId;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    AccountRepository() &#123;</span><br><span class="line">        accountId = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Account <span class="title">save</span><span class="params">(Account account)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (account.getId() == <span class="number">0</span>)&#123;</span><br><span class="line">            account.setId(accounts.size()+<span class="number">1</span>);</span><br><span class="line">            accounts.add(account);</span><br><span class="line">            accountId += <span class="number">1</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            accounts.set(account.getId()-<span class="number">1</span>, account);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> account;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>AccountDto.AccountRegistDto, AccountDto.AccountResponseDto</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@SuppressWarnings</span>(<span class="string">"squid:S1118"</span>)</span><br><span class="line"><span class="meta">@NoArgsConstructor</span>(access = AccessLevel.PRIVATE)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountDto</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="meta">@Builder</span></span><br><span class="line">    <span class="meta">@AllArgsConstructor</span></span><br><span class="line">    <span class="meta">@NoArgsConstructor</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountRegistDto</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> String password;</span><br><span class="line">        <span class="keyword">private</span> String email;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="meta">@Builder</span></span><br><span class="line">    <span class="meta">@AllArgsConstructor</span></span><br><span class="line">    <span class="meta">@NoArgsConstructor</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountResponseDto</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> id;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> String email;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>다음 다시 테스트를 돌려보면 역시 에러… 이번에는 <code>ModelMapper</code>가 없어서 그렇습니다. <code>@Bean</code>를 등록해보죠.</p>
+<ul>
+<li>ForBlogApplication</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ForBlogApplication</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">        </span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> ModelMapper <span class="title">modelMapper</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ModelMapper();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>다시 테스트 코드 실해하면 녹색으로 처리된 테스트 코드를 만날 수 있습니다.</p>
+<h3 id="등록-실패"><a href="#등록-실패" class="headerlink" title="등록 실패"></a>등록 실패</h3><p>테스트는 등록에 실패하느 경우도 생각해야합니다. 등록에 실패하는 경우에는 어떤 처리를 해야하는지 어떤 동작을 해야하는지 명세에 정의되어 있고 그대로 동작하는지 확인하기 위해 다음과 같은 Test 코드를 작성 했습니다.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * name, password, email 필드중 하나라도 없으면 등록하면 실패한다.</span></span><br><span class="line"><span class="comment"> * 404 상태코드를 반환한다.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registAccountBadRequest</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="comment">//Given</span></span><br><span class="line">    <span class="keyword">this</span>.registerAccountDto.setName(<span class="string">" "</span>);</span><br><span class="line">    <span class="keyword">this</span>.registerAccountDto.setPassword(<span class="string">"1234"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//When</span></span><br><span class="line">    <span class="keyword">final</span> ResultActions resultActions = mockMvc.perform(</span><br><span class="line">            post(<span class="string">"/accounts"</span>).contentType(MediaType.APPLICATION_JSON)</span><br><span class="line">                    .content(mapper.writeValueAsString(<span class="keyword">this</span>.registerAccountDto))</span><br><span class="line">                    .with(csrf()));</span><br><span class="line"></span><br><span class="line">    <span class="comment">//Then</span></span><br><span class="line">    resultActions.andExpect(status().isBadRequest());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>이번에 테스트를 실행시켜보면 역시 에러를 만날 수 있습니다. 잘못된 요청에 대한 처리를 하지 않았기때문이죠.</p>
+<p>그럼 코드를 다시 수정해 보겠습니다. 저는 Spring에서 제공하는 <code>@Valid</code>를 사용하여 요청 데이터의 유효성 검사를 진행하겠습니다.</p>
+<ul>
+<li>AccountController</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(<span class="string">"/accounts"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountController</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> AccountService accountService;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ModelMapper modelMapper;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@PostMapping</span>(produces = MediaType.APPLICATION_JSON_VALUE)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ResponseEntity <span class="title">registAccount</span><span class="params">(@RequestBody @Valid <span class="keyword">final</span> AccountRegistDto accountDto,</span></span></span><br><span class="line"><span class="function"><span class="params">                                        <span class="keyword">final</span> BindingResult result)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (result.hasErrors()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ResponseEntity&lt;&gt;(result.getFieldErrors(), HttpStatus.BAD_REQUEST);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Account account = accountService.register(accountDto);</span><br><span class="line">        AccountResponseDto accountResponseDto = modelMapper.map(account, AccountResponseDto<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ResponseEntity&lt;&gt;(accountResponseDto, HttpStatus.CREATED);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>AccountController의 registAccount함수에서 AccountRegistDto앞에 <code>@Valid</code>를 사용하면 AccountRegistDto에서 정의된 유효성 검사를 진행합니다. 그럼 AccountRegistDto로 이동하여 어떤 유효성을 검사하는지 정의해 보죠</p>
+<ul>
+<li>AccountDto.AccountRegistDto, AccountDto.AccountResponseDto</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"></span><br><span class="line"><span class="meta">@SuppressWarnings</span>(<span class="string">"squid:S1118"</span>)</span><br><span class="line"><span class="meta">@NoArgsConstructor</span>(access = AccessLevel.PRIVATE)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountDto</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="meta">@Builder</span></span><br><span class="line">    <span class="meta">@AllArgsConstructor</span></span><br><span class="line">    <span class="meta">@NoArgsConstructor</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountRegistDto</span> </span>&#123;</span><br><span class="line">        <span class="meta">@NotBlank</span></span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="meta">@NotBlank</span></span><br><span class="line">        <span class="keyword">private</span> String password;</span><br><span class="line">        <span class="meta">@NotBlank</span></span><br><span class="line">        <span class="keyword">private</span> String email;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="meta">@Builder</span></span><br><span class="line">    <span class="meta">@AllArgsConstructor</span></span><br><span class="line">    <span class="meta">@NoArgsConstructor</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountResponseDto</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> id;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> String email;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>@NotBlank</code>가 생겼습니다. 해당 필드가 비어있으면 에러를 발생시킵니다. 유효성 검사는 @Min, @Max, @NotBlank 등 다양한 어노테이션들이 있으니 확인해 보세요.</p>
+<p>이와 같은 방법으로 위에 정의한 요구사항들을 구현해보세요. 구현한 내용을 <a href="https://github.com/hsoh1990/spring-for-blog/tree/spring-start-03" target="_blank" rel="noopener">여기</a>에 있습니다.</p>
+<h2 id="에러처리"><a href="#에러처리" class="headerlink" title="에러처리"></a>에러처리</h2><p>추가적으로 spring으로 개발하다보면 위와 같이 에러처리를 해야합니다. 이걸 각 함수마다 따로 정의를 하다보면 중복되는 에러처리가 발생합니다. <code>@ExceptionHandler</code>를 통해 이런 중복된 코드 줄이겠습니다. </p>
+<ul>
+<li>AccountController</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.ex.forblog.account;</span><br><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(<span class="string">"/accounts"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountController</span> </span>&#123;</span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">    <span class="meta">@ExceptionHandler</span>(value = NotFoundException<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">    <span class="title">public</span> <span class="title">ResponseEntity</span> <span class="title">accountNotfoundException</span>(<span class="title">NotFoundException</span> <span class="title">e</span>) </span>&#123;</span><br><span class="line">        ExceptionDto exceptionDto = <span class="keyword">new</span> ExceptionDto();</span><br><span class="line">        exceptionDto.setMessage(<span class="string">"id가 "</span> + e.getMessage() + <span class="string">"인 계정이 없습니다."</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ResponseEntity&lt;&gt;(exceptionDto, HttpStatus.BAD_REQUEST);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>해당 코드는 NotFoundException이 발생하면 처리합니다.</p>
+<h2 id="마치며"><a href="#마치며" class="headerlink" title="마치며"></a>마치며</h2><p>이상으로  글재주가 없다는걸 다시한번 느끼면서 account CRUD에 대한 정리를 마치겠습니다. 다음에는 JPA를 사용하여 DB(Postgresql)와 연동해 보겠습니다.</p>
+<p>감사합니다.</p>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/JPA/">JPA</a> <a class="tag tag--primary tag--small t-link" href="/tags/JUnit/">JUnit</a> <a class="tag tag--primary tag--small t-link" href="/tags/PostgreSQL/">PostgreSQL</a> <a class="tag tag--primary tag--small t-link" href="/tags/java/">java</a> <a class="tag tag--primary tag--small t-link" href="/tags/lombok/">lombok</a> <a class="tag tag--primary tag--small t-link" href="/tags/spring-boot/">spring boot</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/12/08/spring-boot-start-04/" data-tooltip="Spring Boot 정리(04)" aria-label="PREVIOUS: Spring Boot 정리(04)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/09/28/spring-boot-start-02/" data-tooltip="Spring Boot 정리(02)" aria-label="NEXT: Spring Boot 정리(02)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/12/07/spring-boot-start-03/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2018/12/07/spring-boot-start-03/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2018/12/07/spring-boot-start-03/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/12/08/spring-boot-start-04/" data-tooltip="Spring Boot 정리(04)" aria-label="PREVIOUS: Spring Boot 정리(04)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/09/28/spring-boot-start-02/" data-tooltip="Spring Boot 정리(02)" aria-label="NEXT: Spring Boot 정리(02)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/12/07/spring-boot-start-03/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2018/12/07/spring-boot-start-03/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2018/12/07/spring-boot-start-03/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2018/12/07/spring-boot-start-03/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2018/12/07/spring-boot-start-03/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2018/12/07/spring-boot-start-03/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

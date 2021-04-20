@@ -1,0 +1,579 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Electron 애플리케이션 만들기 - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"Electron는 GitHub에서 HTML, CSS 및 JavaScript를 사용하여 데스크톱 응용 프로그램을 개발하기 위해개발된 오픈 소스 라이브러리다. Electron 은 Chromium과 Node.js를 단일 실행으로 합치고 앱을Mac, Windows 와 Linux 용으로 패키지화 하여 사용가능하게 한다.\n  \nTable of Contents\nQuick start\nInter process communication\nUsingu node modules\nApplication Packaging\nReference\nContributors\n\n\nElectron 구조\n\nmain processElectron이 실행될 때 Node.js가 실행되는 부분을 main process라고 한다. main process는 새창을생성하거나 윈도우, 맥, 리녹스의 네이티브 GUI를 조작할 수 있으며, Node.js에서 사용하는 모듈을 사용할 수 있다.\nrenderer process사용자에게 보여지는 GUI를 구성할 때 작동하는 웹페이지를 renderer process라고 한다. renderer process는네이티브 리소스에 접근할 수 없으며, 크로미움을 사용하여 사용자에게 보여주는 화면을 구성한다.하나의 main process에서 다수의 renderer process를 관리하며, renderer process는 각각이 독립적으로 작동하고단일 페이지의 작동에만 영향을 준다. Electron의 BrowserWindow 클래스를 통해 main process에서 redererperocess를생성할 수 있다. BrowserWindow 클래스를 통해 생성된 인스턴스가 소멸할 때 renderer process도 같이 소멸된다.\nQuick start\n먼저 Electron 모듈을 설치한다.\n\n123$ npm init -y$ npm install electron --save-dev --save-exact$ npm install electron -g\n\ngithub에서 제공하는 electron-quick-start를 사용해도 된다.\n\n1234$ git clone https://github.com/electron/electron-quick-start$ cd electron-quick-start$ npm install$ npm start\n\nmain.js 생성 후 BrowserWindow 클래스를 통해 인스턴스 생성\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344const &#123;app, BrowserWindow&#125; = require('electron')const path = require('path')const url = require('url')//윈도우 객체의 전역으로 선언합니다. 그렇지 않으면 윈도우가 자동으로 닫는다.//자바 스크립트 객체가 가비지 수집 될 때 자동으로 닫는다.let winfunction createWindow () &#123;  // 브라우저 창을 만듭니다.  win = new BrowserWindow(&#123;width: 800, height: 600&#125;)  //index.html를 로드합니다.  win.loadURL(url.format(&#123;    pathname: path.join(__dirname, 'index.html'),    protocol: 'file:',    slashes: true  &#125;))  // 개발툴을 사용하기 위해 오픈한다.  win.webContents.openDevTools()  // 윈도우가 닫힐 때 발생되는 이벤트다.  win.on('closed', () =&gt; &#123;    win = null  &#125;)&#125;//사용 준비가 완료되면 윈도우를 연다.app.on('ready', createWindow)// 모든 창이 닫히면 종료한다.app.on('window-all-closed', () =&gt; &#123;  if (process.platform !== 'darwin') &#123;    app.quit()  &#125;&#125;)app.on('activate', () =&gt; &#123;  // macOS에서 독 아이콘이 클릭되고 다른 창은 열리지 않는다.  if (win === null) &#123;    createWindow()  &#125;&#125;)\n\nrenderer process에서  표시하려는 웹페이지(index.html)를 만든다.\n\n12345678910&lt;!DOCTYPE html&gt;&lt;html lang=\"en\"&gt;&lt;head&gt;    &lt;meta charset=\"UTF-8\"&gt;    &lt;title&gt;Hello Electron&lt;/title&gt;&lt;/head&gt;&lt;body&gt;    &lt;h1&gt;Hello Electron!&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;\n\nElectron App 실행\n\n12$ ./node_modules/.bin/electron main.js$ electron main.js\nInter process communicationelectron 실행시 main, renderer 두개의 프로세스가 동작한다. electron에서는 main과 renderer는 비동기 통신을 지원하며, 통신 모듈은ipcMain, ipcRenderer, remote가 있다.ipcMain, ipcRenderer 모듈은 EventEmitter 클래스의 확장 인스턴스로 main 프로세스를 사용할 떄 renderer 프로세스가 보내닌 메시지를 동기/비동기로 처리한다.\n\nEventEmitterEventEmitter는 Node.js에서 지원하는 모듈로 이벤트를 등록하고 등록된 메시지를 통해 이벤트를 받는다.예시는 다음과 같다.\n\n12345678910const EventEmitter = require('events');const myEmitter = new EventEmitter();//message가 event인 이벤트를 등록한다.myEmitter.on('event', () =&gt; &#123;  console.log('A');&#125;);//message가 event인 이벤트를 발생한다.myEmitter.emit('event');\n자세한 내용은 EventEmitter를 참조한다.\nipcMain\n메시지를 보낼 때 이벤트 이름은 channel이다.\n동기 메시지에 회신 하려면 event.returnValue를 설정 해야한다.\n비동기 메시지를 다시 보낸 사람에 게 보내려면 event.sender.send(…)를 사용할 수 있다.\n\nmain process에서 사용은 다음과 같다.\n12345678910const &#123;ipcMain&#125; = require('electron')ipcMain.on('asynchronous-message', (event, arg) =&gt; &#123;  console.log(arg)  // arg 내용이 출력된다.  event.sender.send('asynchronous-reply', 'pong') // 비동기 메시지를 전송한다.&#125;)ipcMain.on('synchronous-message', (event, arg) =&gt; &#123;  console.log(arg)  // arg 내용이 출력된다.  event.returnValue = 'pong' // 동기 메시지를 전송한다.&#125;)\nipcMain 모듈은 이벤트를 처리하기 위해 다음의 메소드를 가진다.\n\nipcMain.on(channel, listener)channel(String)을 수신하고 새로운 메시지가 도착하면 listener(Function)를 호출한다.\nipcMain.once(channel, listener)일회성 channel(String)을 생성하고 새로운 메시지가 도착하면 listener(Function)를 호출 후 이벤트를 제거한다.\nipcMain.removeListener(channel, listener)channel(String)에 대한 listener(Function)를 제거한다.-ipcMain.removeAllListeners([channel])지정한 channel(String)의 listener(Function)들을 전부 제거합니다.\n\nipcRendererrederer process에서 사용은 다음과 같다.\n1234567const &#123;ipcRenderer&#125; = require('electron');ipcRenderer.send('asynchronous-message', 'ping')ipcRenderer.on('asynchronous-reply', (arg) =&gt; &#123;    console.log(arg) // \"pong\" 출력&#125;)\n대부분의 메소드는 ipcMain과 비슷하다.다음 ipc 통신을 통해 main, renderer 프로세스간의 통신은 ./communication/*.js를 통헤 등록해보고index.html에서 버튼은 생성해 이벤트를 발생시켜 확인한다.\nUsing node moduleselectron에서는 main 프로세스를 통해 npm에서 제공한는 node 모듈을 사용할 수 있다.사용방법은 node.js에서 사용하는 것과 동일하게 npm을 통해 다운 받고 mamin 프로세스에서 모듈을 가져와 사용한다.이번에는 serialport 모둘을 사용하여 현재 연결된 장치 정보를 가져오도록 한다.\n123$ npm install serialport --save$ npm install --save-dev electron-rebuild$ ./node_modules/.bin/serialport-list -f json\n설치가 완료되면 serialport-list모듈을 통해 현재 연결된 장치의 정보를 가져올 수 있다. 다음을 js에서 코딩하면 다음과 같다.\n12345var SerialPort = require('serialport');SerialPort.list(function (err, ports) &#123;\tconsole.log(ports);&#125;);\n콘솔로 출력해본 데이터를 ipc 통신을 통해 데이터를 요청하고 html에서 리스트를 보도록 해본다.\n\nrenderer 프로세스에서 버튼를 만들어 해당 데이터를 요청한다.\n\nindex.html1&lt;button onclick=\"reqDevice()\"&gt;request Device List!&lt;/button&gt;\nindex.html\nipcRendererClass.js123function reqDevice() &#123;\tipcRenderer.send('reqDevice', 'any');&#125;\nipcRendererClass.js\n\nmain 프로세스에서 요청을 받아 serialport모듈을 사용해 데이터를 가져온다\nmain 프로세스에서 renderer프로세스로 값을 전달한다.\n\nipcMainClass.js1234567ipcMain.on('reqDevice', (event, arg) =&gt; &#123;    console.log(arg);    thisClass.getDeviceList().then(function (deviceList) &#123;\t\tconsole.log(deviceList);\t\tevent.sender.send('respDevice', deviceList)\t&#125;)&#125;)\nipcMainClass.js\n\n화면에 데이터를 보여준다.\n\nipcMainClass.js1234567ipcRenderer.on('respDevice', (event, args) =&gt; &#123;\tconsole.log(args);\tjQuery('#deviceList').empty()\tfor (let element of args) &#123;\t\tjQuery('#deviceList').append('&lt;li&gt;' + element.comName +'&lt;/li&gt;')\t&#125;&#125;);\nipcRendererClass.js\nApplication PackagingElectron으로 만든 앱을 배포하기 위해서는 앱을 Packaging후 깔끔하게 installer 파일로 빌드하여 배포하는게 해야한다.여기서는 기본적인 Packaging방법을 설명한다. Packaging은 electron-packager 모듈을 통해 각 OS에 따라서 빌드할 수 있다.\n먼저 모듈을 글로벌로 설치해야 한다.\n12$ npm install electron-packager --save-dev$ npm install electron-packager -g\n다음 빌드를 하기위해서는 package.json을 수정해야한다.여기서 main.js의 위치를 제대로 추가하지 않으면 빌드에 성공해도 실행이 되지 않을 수 있으니 주의해야한다.\n다음 package.json에 script를 추가한다\n1234567\"scripts\": &#123;  . . . .  \"build\": \"electron-packager . AppName  --out=dist --asar --overwrite --all\",      \"build-osx\": \"electron-packager . AppName --platform=darwin --arch=all --icon=./assets/icon.icns --out ./dist --overwrite --asar\",      \"build-linux\": \"electron-packager . AppName --platform linux --arch=all --out ./dist --overwrite --asar\",      \"build-win32\": \"electron-packager . AppName --platform win32 --arch=ia32 --out ./dist --overwrite --asar\",&#125;\n자신의 OS에 따라 스크립트를 실행한다.\n1$ npm run build-osx\ninstaller는 각 OS별 모듈이 따로 있으며, 사용방법은 모듈별로 따로 참고해야 한다.mac OS에서 사용할 수 있도록 .dmg로 만드는 방법은 다음과 같다.\n12$ npm install electron-installer-dmg --save-dev$ npm install electron-installer-dmg -g\n다음 package.json에 script를 추가한다\n1234\"scripts\": &#123;  . . . .  \"installer-mac\": \"electron-installer-dmg ./dist/AppName-darwin-x64/AppName.app serial-list --out=dist --icon=assets/icon.icns --overwrite\"&#125;\n빌드가 완료되면 dmg파일이 생성되고 이를 통해 배포하면 된다.\n참고 - windows 경우 electron-installer-squirrel-windows를 사용한다.\nReference\nhttps://electronjs.org/docs\nhttps://www.slideshare.net/deview/123-electron\nhttps://nodejs.org/api/events.html\n\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2019-01-18T23:40:00+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2019-01-18T23:40:00+09:00","description":"Electron는 GitHub에서 HTML, CSS 및 JavaScript를 사용하여 데스크톱 응용 프로그램을 개발하기 위해개발된 오픈 소스 라이브러리다. Electron 은 Chromium과 Node.js를 단일 실행으로 합치고 앱을Mac, Windows 와 Linux 용으로 패키지화 하여 사용가능하게 한다.","headline":"Electron 애플리케이션 만들기","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/01/18/electron-tutorial/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2019/01/18/electron-tutorial/","keywords":"node.js, electron"}</script>
+    <meta name="description" content="Electron는 GitHub에서 HTML, CSS 및 JavaScript를 사용하여 데스크톱 응용 프로그램을 개발하기 위해개발된 오픈 소스 라이브러리다. Electron 은 Chromium과 Node.js를 단일 실행으로 합치고 앱을Mac, Windows 와 Linux 용으로 패키지화 하여 사용가능하게 한다.">
+<meta name="keywords" content="node.js,electron">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Electron 애플리케이션 만들기">
+<meta property="og:url" content="http://yoursite.com/2019/01/18/electron-tutorial/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="Electron는 GitHub에서 HTML, CSS 및 JavaScript를 사용하여 데스크톱 응용 프로그램을 개발하기 위해개발된 오픈 소스 라이브러리다. Electron 은 Chromium과 Node.js를 단일 실행으로 합치고 앱을Mac, Windows 와 Linux 용으로 패키지화 하여 사용가능하게 한다.">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://yoursite.com/2019/01/18/electron-tutorial/image/electron-tutorial-structure.JPG">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.734Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Electron 애플리케이션 만들기">
+<meta name="twitter:description" content="Electron는 GitHub에서 HTML, CSS 및 JavaScript를 사용하여 데스크톱 응용 프로그램을 개발하기 위해개발된 오픈 소스 라이브러리다. Electron 은 Chromium과 Node.js를 단일 실행으로 합치고 앱을Mac, Windows 와 Linux 용으로 패키지화 하여 사용가능하게 한다.">
+<meta name="twitter:image" content="http://yoursite.com/2019/01/18/electron-tutorial/image/electron-tutorial-structure.JPG">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Electron 애플리케이션 만들기
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2019-01-18T23:40:00+09:00">
+	
+		    Jan 18, 2019
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/electron/">electron</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>Electron는 GitHub에서 HTML, CSS 및 JavaScript를 사용하여 데스크톱 응용 프로그램을 개발하기 위해<br>개발된 오픈 소스 라이브러리다. Electron 은 Chromium과 Node.js를 단일 실행으로 합치고 앱을<br>Mac, Windows 와 Linux 용으로 패키지화 하여 사용가능하게 한다.</p>
+<a id="more"></a>  
+<h2 id="Table-of-Contents"><a href="#Table-of-Contents" class="headerlink" title="Table of Contents"></a><strong>Table of Contents</strong></h2><ul>
+<li><a href="#Quick-start">Quick start</a></li>
+<li><a href="#Inter-process-communication">Inter process communication</a></li>
+<li><a href="#Using-node-modules">Usingu node modules</a></li>
+<li><a href="#Application-Packaging">Application Packaging</a></li>
+<li><a href="#Reference">Reference</a></li>
+<li><a href="#Contributors">Contributors</a></li>
+</ul>
+<ul>
+<li>Electron 구조<br><img src="./image/electron-tutorial-structure.JPG" alt="Image"></li>
+</ul>
+<h3 id="main-process"><a href="#main-process" class="headerlink" title="main process"></a>main process</h3><p>Electron이 실행될 때 Node.js가 실행되는 부분을 main process라고 한다. main process는 새창을<br>생성하거나 윈도우, 맥, 리녹스의 네이티브 GUI를 조작할 수 있으며, Node.js에서 사용하는 모듈을 사용할 수 있다.<br><br></p>
+<h3 id="renderer-process"><a href="#renderer-process" class="headerlink" title="renderer process"></a>renderer process</h3><p>사용자에게 보여지는 GUI를 구성할 때 작동하는 웹페이지를 renderer process라고 한다. renderer process는<br>네이티브 리소스에 접근할 수 없으며, 크로미움을 사용하여 사용자에게 보여주는 화면을 구성한다.<br><br><br>하나의 main process에서 다수의 renderer process를 관리하며, renderer process는 각각이 독립적으로 작동하고<br>단일 페이지의 작동에만 영향을 준다. Electron의 BrowserWindow 클래스를 통해 main process에서 redererperocess를<br>생성할 수 있다. BrowserWindow 클래스를 통해 생성된 인스턴스가 소멸할 때 renderer process도 같이 소멸된다.</p>
+<h2 id="Quick-start"><a href="#Quick-start" class="headerlink" title="Quick start"></a>Quick start</h2><ul>
+<li>먼저 Electron 모듈을 설치한다.</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ npm init -y</span><br><span class="line">$ npm install electron --save-dev --save-exact</span><br><span class="line">$ npm install electron -g</span><br></pre></td></tr></table></figure>
+<ul>
+<li>github에서 제공하는 electron-quick-start를 사용해도 된다.</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ git <span class="built_in">clone</span> https://github.com/electron/electron-quick-start</span><br><span class="line">$ <span class="built_in">cd</span> electron-quick-start</span><br><span class="line">$ npm install</span><br><span class="line">$ npm start</span><br></pre></td></tr></table></figure>
+<ul>
+<li>main.js 생성 후 BrowserWindow 클래스를 통해 인스턴스 생성</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> &#123;app, BrowserWindow&#125; = <span class="built_in">require</span>(<span class="string">'electron'</span>)</span><br><span class="line"><span class="keyword">const</span> path = <span class="built_in">require</span>(<span class="string">'path'</span>)</span><br><span class="line"><span class="keyword">const</span> url = <span class="built_in">require</span>(<span class="string">'url'</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">//윈도우 객체의 전역으로 선언합니다. 그렇지 않으면 윈도우가 자동으로 닫는다.</span></span><br><span class="line"><span class="comment">//자바 스크립트 객체가 가비지 수집 될 때 자동으로 닫는다.</span></span><br><span class="line"><span class="keyword">let</span> win</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">createWindow</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="comment">// 브라우저 창을 만듭니다.</span></span><br><span class="line">  win = <span class="keyword">new</span> BrowserWindow(&#123;<span class="attr">width</span>: <span class="number">800</span>, <span class="attr">height</span>: <span class="number">600</span>&#125;)</span><br><span class="line"></span><br><span class="line">  <span class="comment">//index.html를 로드합니다.</span></span><br><span class="line">  win.loadURL(url.format(&#123;</span><br><span class="line">    pathname: path.join(__dirname, <span class="string">'index.html'</span>),</span><br><span class="line">    protocol: <span class="string">'file:'</span>,</span><br><span class="line">    slashes: <span class="literal">true</span></span><br><span class="line">  &#125;))</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 개발툴을 사용하기 위해 오픈한다.</span></span><br><span class="line">  win.webContents.openDevTools()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 윈도우가 닫힐 때 발생되는 이벤트다.</span></span><br><span class="line">  win.on(<span class="string">'closed'</span>, () =&gt; &#123;</span><br><span class="line">    win = <span class="literal">null</span></span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//사용 준비가 완료되면 윈도우를 연다.</span></span><br><span class="line">app.on(<span class="string">'ready'</span>, createWindow)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 모든 창이 닫히면 종료한다.</span></span><br><span class="line">app.on(<span class="string">'window-all-closed'</span>, () =&gt; &#123;</span><br><span class="line">  <span class="keyword">if</span> (process.platform !== <span class="string">'darwin'</span>) &#123;</span><br><span class="line">    app.quit()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">app.on(<span class="string">'activate'</span>, () =&gt; &#123;</span><br><span class="line">  <span class="comment">// macOS에서 독 아이콘이 클릭되고 다른 창은 열리지 않는다.</span></span><br><span class="line">  <span class="keyword">if</span> (win === <span class="literal">null</span>) &#123;</span><br><span class="line">    createWindow()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>renderer process에서  표시하려는 웹페이지(index.html)를 만든다.</li>
+</ul>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE <span class="meta-keyword">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span> <span class="attr">lang</span>=<span class="string">"en"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">charset</span>=<span class="string">"UTF-8"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">title</span>&gt;</span>Hello Electron<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">h1</span>&gt;</span>Hello Electron!<span class="tag">&lt;/<span class="name">h1</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>Electron App 실행</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ ./node_modules/.bin/electron main.js</span><br><span class="line">$ electron main.js</span><br></pre></td></tr></table></figure>
+<h2 id="Inter-process-communication"><a href="#Inter-process-communication" class="headerlink" title="Inter process communication"></a>Inter process communication</h2><p>electron 실행시 main, renderer 두개의 프로세스가 동작한다. electron에서는 main과 renderer는 비동기 통신을 지원하며, 통신 모듈은<br>ipcMain, ipcRenderer, remote가 있다.<br>ipcMain, ipcRenderer 모듈은 EventEmitter 클래스의 확장 인스턴스로 main 프로세스를 사용할 떄 renderer 프로세스가 보내닌 메시지를 동기/비동기로 처리한다.</p>
+<ul>
+<li>EventEmitter<br>EventEmitter는 Node.js에서 지원하는 모듈로 이벤트를 등록하고 등록된 메시지를 통해 이벤트를 받는다.<br>예시는 다음과 같다.</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> EventEmitter = <span class="built_in">require</span>(<span class="string">'events'</span>);</span><br><span class="line"><span class="keyword">const</span> myEmitter = <span class="keyword">new</span> EventEmitter();</span><br><span class="line"></span><br><span class="line"><span class="comment">//message가 event인 이벤트를 등록한다.</span></span><br><span class="line">myEmitter.on(<span class="string">'event'</span>, () =&gt; &#123;</span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">'A'</span>);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">//message가 event인 이벤트를 발생한다.</span></span><br><span class="line">myEmitter.emit(<span class="string">'event'</span>);</span><br></pre></td></tr></table></figure>
+<p>자세한 내용은 <a href="https://nodejs.org/api/events.html#events_class_eventemitter" target="_blank" rel="noopener">EventEmitter</a>를 참조한다.</p>
+<h3 id="ipcMain"><a href="#ipcMain" class="headerlink" title="ipcMain"></a>ipcMain</h3><ul>
+<li>메시지를 보낼 때 이벤트 이름은 channel이다.</li>
+<li>동기 메시지에 회신 하려면 event.returnValue를 설정 해야한다.</li>
+<li>비동기 메시지를 다시 보낸 사람에 게 보내려면 event.sender.send(…)를 사용할 수 있다.</li>
+</ul>
+<p>main process에서 사용은 다음과 같다.</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> &#123;ipcMain&#125; = <span class="built_in">require</span>(<span class="string">'electron'</span>)</span><br><span class="line">ipcMain.on(<span class="string">'asynchronous-message'</span>, (event, arg) =&gt; &#123;</span><br><span class="line">  <span class="built_in">console</span>.log(arg)  <span class="comment">// arg 내용이 출력된다.</span></span><br><span class="line">  event.sender.send(<span class="string">'asynchronous-reply'</span>, <span class="string">'pong'</span>) <span class="comment">// 비동기 메시지를 전송한다.</span></span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">ipcMain.on(<span class="string">'synchronous-message'</span>, (event, arg) =&gt; &#123;</span><br><span class="line">  <span class="built_in">console</span>.log(arg)  <span class="comment">// arg 내용이 출력된다.</span></span><br><span class="line">  event.returnValue = <span class="string">'pong'</span> <span class="comment">// 동기 메시지를 전송한다.</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>ipcMain 모듈은 이벤트를 처리하기 위해 다음의 메소드를 가진다.</p>
+<ul>
+<li>ipcMain.on(channel, listener)<br>channel(String)을 수신하고 새로운 메시지가 도착하면 listener(Function)를 호출한다.</li>
+<li>ipcMain.once(channel, listener)<br>일회성 channel(String)을 생성하고 새로운 메시지가 도착하면 listener(Function)를 호출 후 이벤트를 제거한다.</li>
+<li>ipcMain.removeListener(channel, listener)<br>channel(String)에 대한 listener(Function)를 제거한다.<br>-ipcMain.removeAllListeners([channel])<br>지정한 channel(String)의 listener(Function)들을 전부 제거합니다.</li>
+</ul>
+<h3 id="ipcRenderer"><a href="#ipcRenderer" class="headerlink" title="ipcRenderer"></a>ipcRenderer</h3><p>rederer process에서 사용은 다음과 같다.</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> &#123;ipcRenderer&#125; = <span class="built_in">require</span>(<span class="string">'electron'</span>);</span><br><span class="line"></span><br><span class="line">ipcRenderer.send(<span class="string">'asynchronous-message'</span>, <span class="string">'ping'</span>)</span><br><span class="line"></span><br><span class="line">ipcRenderer.on(<span class="string">'asynchronous-reply'</span>, (arg) =&gt; &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(arg) <span class="comment">// "pong" 출력</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>대부분의 메소드는 ipcMain과 비슷하다.<br>다음 ipc 통신을 통해 main, renderer 프로세스간의 통신은 ./communication/*.js를 통헤 등록해보고<br>index.html에서 버튼은 생성해 이벤트를 발생시켜 확인한다.</p>
+<h2 id="Using-node-modules"><a href="#Using-node-modules" class="headerlink" title="Using node modules"></a>Using node modules</h2><p>electron에서는 main 프로세스를 통해 npm에서 제공한는 node 모듈을 사용할 수 있다.<br>사용방법은 node.js에서 사용하는 것과 동일하게 npm을 통해 다운 받고 mamin 프로세스에서 모듈을 가져와 사용한다.<br>이번에는 serialport 모둘을 사용하여 현재 연결된 장치 정보를 가져오도록 한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ npm install serialport --save</span><br><span class="line">$ npm install --save-dev electron-rebuild</span><br><span class="line">$ ./node_modules/.bin/serialport-list -f json</span><br></pre></td></tr></table></figure>
+<p>설치가 완료되면 serialport-list모듈을 통해 현재 연결된 장치의 정보를 가져올 수 있다. 다음을 js에서 코딩하면 다음과 같다.</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> SerialPort = <span class="built_in">require</span>(<span class="string">'serialport'</span>);</span><br><span class="line"></span><br><span class="line">SerialPort.list(<span class="function"><span class="keyword">function</span> (<span class="params">err, ports</span>) </span>&#123;</span><br><span class="line">	<span class="built_in">console</span>.log(ports);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>콘솔로 출력해본 데이터를 ipc 통신을 통해 데이터를 요청하고 html에서 리스트를 보도록 해본다.</p>
+<ul>
+<li>renderer 프로세스에서 버튼를 만들어 해당 데이터를 요청한다.</li>
+</ul>
+<figure class="highlight html"><figcaption><span>index.html</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">button</span> <span class="attr">onclick</span>=<span class="string">"reqDevice()"</span>&gt;</span>request Device List!<span class="tag">&lt;/<span class="name">button</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>index.html</p>
+<figure class="highlight javascript"><figcaption><span>ipcRendererClass.js</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">reqDevice</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">	ipcRenderer.send(<span class="string">'reqDevice'</span>, <span class="string">'any'</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ipcRendererClass.js</p>
+<ul>
+<li>main 프로세스에서 요청을 받아 serialport모듈을 사용해 데이터를 가져온다</li>
+<li>main 프로세스에서 renderer프로세스로 값을 전달한다.</li>
+</ul>
+<figure class="highlight javascript"><figcaption><span>ipcMainClass.js</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ipcMain.on(<span class="string">'reqDevice'</span>, (event, arg) =&gt; &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(arg);</span><br><span class="line">    thisClass.getDeviceList().then(<span class="function"><span class="keyword">function</span> (<span class="params">deviceList</span>) </span>&#123;</span><br><span class="line">		<span class="built_in">console</span>.log(deviceList);</span><br><span class="line">		event.sender.send(<span class="string">'respDevice'</span>, deviceList)</span><br><span class="line">	&#125;)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>ipcMainClass.js</p>
+<ul>
+<li>화면에 데이터를 보여준다.</li>
+</ul>
+<figure class="highlight javascript"><figcaption><span>ipcMainClass.js</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ipcRenderer.on(<span class="string">'respDevice'</span>, (event, args) =&gt; &#123;</span><br><span class="line">	<span class="built_in">console</span>.log(args);</span><br><span class="line">	jQuery(<span class="string">'#deviceList'</span>).empty()</span><br><span class="line">	<span class="keyword">for</span> (<span class="keyword">let</span> element <span class="keyword">of</span> args) &#123;</span><br><span class="line">		jQuery(<span class="string">'#deviceList'</span>).append(<span class="string">'&lt;li&gt;'</span> + element.comName +<span class="string">'&lt;/li&gt;'</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>ipcRendererClass.js</p>
+<h2 id="Application-Packaging"><a href="#Application-Packaging" class="headerlink" title="Application Packaging"></a>Application Packaging</h2><p>Electron으로 만든 앱을 배포하기 위해서는 앱을 Packaging후 깔끔하게 installer 파일로 빌드하여 배포하는게 해야한다.<br>여기서는 기본적인 Packaging방법을 설명한다. Packaging은 electron-packager 모듈을 통해 각 OS에 따라서 빌드할 수 있다.</p>
+<p>먼저 모듈을 글로벌로 설치해야 한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ npm install electron-packager --save-dev</span><br><span class="line">$ npm install electron-packager -g</span><br></pre></td></tr></table></figure>
+<p>다음 빌드를 하기위해서는 package.json을 수정해야한다.<br>여기서 main.js의 위치를 제대로 추가하지 않으면 빌드에 성공해도 실행이 되지 않을 수 있으니 주의해야한다.</p>
+<p>다음 package.json에 script를 추가한다</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">"scripts": &#123;</span><br><span class="line">  . . . .</span><br><span class="line">  "build": "electron-packager . AppName  --out=dist --asar --overwrite --all",</span><br><span class="line">      "build-osx": "electron-packager . AppName --platform=darwin --arch=all --icon=./assets/icon.icns --out ./dist --overwrite --asar",</span><br><span class="line">      "build-linux": "electron-packager . AppName --platform linux --arch=all --out ./dist --overwrite --asar",</span><br><span class="line">      "build-win32": "electron-packager . AppName --platform win32 --arch=ia32 --out ./dist --overwrite --asar",</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>자신의 OS에 따라 스크립트를 실행한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ npm run build-osx</span><br></pre></td></tr></table></figure>
+<p>installer는 각 OS별 모듈이 따로 있으며, 사용방법은 모듈별로 따로 참고해야 한다.<br>mac OS에서 사용할 수 있도록 .dmg로 만드는 방법은 다음과 같다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ npm install electron-installer-dmg --save-dev</span><br><span class="line">$ npm install electron-installer-dmg -g</span><br></pre></td></tr></table></figure>
+<p>다음 package.json에 script를 추가한다</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">"scripts": &#123;</span><br><span class="line">  . . . .</span><br><span class="line">  "installer-mac": "electron-installer-dmg ./dist/AppName-darwin-x64/AppName.app serial-list --out=dist --icon=assets/icon.icns --overwrite"</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>빌드가 완료되면 dmg파일이 생성되고 이를 통해 배포하면 된다.</p>
+<p>참고 - windows 경우 electron-installer-squirrel-windows를 사용한다.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://electronjs.org/docs" target="_blank" rel="noopener">https://electronjs.org/docs</a></li>
+<li><a href="https://www.slideshare.net/deview/123-electron" target="_blank" rel="noopener">https://www.slideshare.net/deview/123-electron</a></li>
+<li><a href="https://nodejs.org/api/events.html" target="_blank" rel="noopener">https://nodejs.org/api/events.html</a></li>
+</ul>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/electron/">electron</a> <a class="tag tag--primary tag--small t-link" href="/tags/node-js/">node.js</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/19/electron-vue-tutorial/" data-tooltip="Electron + Vue.js 애플리케이션 만들기" aria-label="PREVIOUS: Electron + Vue.js 애플리케이션 만들기">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/16/spring-core-resource/" data-tooltip="Spring 핵심 기술 (Resource 추상화)" aria-label="NEXT: Spring 핵심 기술 (Resource 추상화)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/18/electron-tutorial/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/18/electron-tutorial/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/18/electron-tutorial/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/19/electron-vue-tutorial/" data-tooltip="Electron + Vue.js 애플리케이션 만들기" aria-label="PREVIOUS: Electron + Vue.js 애플리케이션 만들기">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/16/spring-core-resource/" data-tooltip="Spring 핵심 기술 (Resource 추상화)" aria-label="NEXT: Spring 핵심 기술 (Resource 추상화)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/18/electron-tutorial/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/18/electron-tutorial/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/18/electron-tutorial/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/18/electron-tutorial/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/18/electron-tutorial/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/18/electron-tutorial/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

@@ -1,0 +1,557 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Spring 핵심 기술 (IoC, Bean - 01) - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"IoC 는 Inversion of Control의 약자로 어떤 객체가 사용하는 의존 객체를 직접 만들어 사용하는게 아니라, 주입 받아 사용하는 방법으로 DI(Dependency Injection)이라고도 한다. 다시 말하면 객체 생명주기를 관리하며 DI 패턴을 제공하여 비즈니스 로직에 집중할 수 있도록 한다.\n  \n스프링 IoC 컨테이너\nBeanFactory - 가장 최상위 핵심 인터페이스\n애플리케이션 컴포넌트의 중앙 저장소\n빈 설정 소스로 부터 빈 정의를 읽어들이고, 빈을 구성/제공\n\n스프링 빈(Bean)\n\n스프링 IoC 컨테이너가 관리하는 객체\n싱글톤, 프로토타입 스코프\n라이프사이클 인터페이스 \n@Bean, @Component, @Service, @Repository 등 어노테이션으로 빈 설정\napplication.xml 의  테크로 빈 설정\n\n빈 설정 방법스프링 설정파일을 통한 빈 등록\n고전적인 방법으로 application.xml 설정을 통해 빈을 등록\n 을 통해 빈으로 등록할 class를 설정\n 를 통해 빈 객체를 주입\n\n1234567891011&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;&lt;beans xmlns=\"http://www.springframework.org/schema/beans\"       xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"       xsi:schemaLocation=\"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd\"&gt;    &lt;bean id=\"bookService\" class=\"com.ex.forblog.book.BookService\"&gt;        &lt;property name=\"bookRepository\" ref=\"bookRepository\"/&gt;    &lt;/bean&gt;    &lt;bean id=\"bookRepository\" class=\"com.ex.forblog.book.BookRepository\"/&gt;&lt;/beans&gt;\ncomponent-scan을 이용한 빈 등록\n위 방법은 빈을 하나하나 등록해야하는 불편\n 을 통해 어노테이션을 통해 빈으로 설정한 빈 class들을 찾아 등록\n\n12345678&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;&lt;beans xmlns=\"http://www.springframework.org/schema/beans\"       xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"       xmlns:context=\"http://www.springframework.org/schema/context\"       xsi:schemaLocation=\"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd\"&gt;    &lt;context:component-scan base-package=\"com.ex.forblog\"/&gt;&lt;/beans&gt;\nJAVA config을 이용한 빈 등록\n최근(꾀 오래전?) 에는 xml파일을 사용하지 않고 JAVA를 사용하여 등록\n@Bean 통해 빈으로 등록\n@Autowire를 통해 빈 객체 주입\n\n123456789101112131415@Configurationpublic class ApplicationConfig &#123;    @Bean    public BookRepository bookRepository()&#123;        return new BookRepository();    &#125;    @Bean    public BookService bookService()&#123;        BookService bookService = new BookService();        bookService.setBookRepository(bookRepository());        return bookService;    &#125;&#125;\nComponentScan을 이용한 빈 등록\nxml과 마찬가지로 JAVA config 또한 @ComponentScan으로 basePackageClasses로 지정된 클래스 하위에서 어노테이션을 통해 빈으로 설정한 빈 class들을 찾아 등록\n\n12345@Configuration@ComponentScan(basePackageClasses = Application.class)public class ApplicationConfig &#123;&#125;\nSpringBootApplication을 이용한 빈 등록\n위의 과정들을 spring boot에서는 @SpringBootApplication를 통해 지원\n@SpringBootApplication을 확인해 보면 @ComponentScan를 확인 가능  \nApplication 클래스 하위 패키지에서 빈 class들을 찾아 등록한다.\n\n1234567@SpringBootApplicationpublic class Application &#123;    public static void main(String[] args) &#123;        SpringApplication.run(Application.class, args);    &#125;&#125;\n123456789101112@Target(ElementType.TYPE)@Retention(RetentionPolicy.RUNTIME)@Documented@Inherited@SpringBootConfiguration@EnableAutoConfiguration@ComponentScan(excludeFilters = &#123;\t\t@Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),\t\t@Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) &#125;)public @interface SpringBootApplication &#123; ...&#125;\n@AutowiredIoC에 등록된 빈을 사용하는 방법은 @Autowired 어노테이션을 이용하여 객체의 타입에 해당하는 빈을 찾아 주입받아 사용한다. \n\n기본값은 true로 해당 객체 다입을 못찾으면 어플리케이션 구동 실패\n\n같은 타입의 빈이 여러개 일 때 @Primary 통해 주입\n\n\n12345678910111213public interface BookRepository &#123;\t...&#125;@Repository @Primarypublic class HsBookRepository implements BookRepository &#123;    ...&#125;@Repositorypublic class MyBookRepository implements BookRepository&#123;    ...&#125;\n1234567@Servicepublic class BookService &#123;    @Autowired    public BookRepository bookRepository;        ...&#125;\n\n같은 타입의 빈이 여러개 일 때 @Qualifier를 통해 주입\n\n@Qualifier 사용할 경우 설정이 따로 없으면 빈에 등록된 이름은 다음과 같이 camel 표기법을 사용\n\n\n12345678910111213public interface BookRepository &#123;\t...&#125;@Repositorypublic class HsBookRepository implements BookRepository &#123;    ...&#125;@Repositorypublic class MyBookRepository implements BookRepository&#123;    ...&#125;\n12345678@Servicepublic class BookService &#123;    @Autowired @Qualifier(\"hsBookRepository\")    public BookRepository bookRepository;        ...&#125;\n\n여러 빈 주입 가능\n\n123456@Servicepublic class BookService &#123;    @Autowired    List&lt;BookRepository&gt; bookRepositories;        ...&#125;\n@Commponent와 @ComponentScan\n@Commponent는 빈으로 등록할 class\n@Commponent는 @Controller, @Service, @Repository로 구체화 되어 사용\n@ComponentScan는 특정 패키지 안의 클래스들을 스캔하여 빈 등록\n실제 스캐닝은 ConfigurationClassPostProcessor라는 BeanFactoryPostProcessor에의해 처리\n\n빈 스코프\n빈은 싱글톤, 프로토타입 스코프를 가짐\n스코프 기본은 싱글톤, @Scope를 통해 설정 가능\n\n123456789@Componentpublic class Single &#123;    ...&#125;@Component @Scope(\"prototype\")public class Proto &#123;    ...&#125;\n\n싱글톤 빈이 프로토타입 빈을 참조하려면 @Scope에 proxyMode 설정\n\n1234567891011121314@Component @Scope(value = \"prototype\", proxyMode = ScopedProxyMode.TARGET_CLASS)public class Proto &#123;    ...&#125;@Componentpublic class Single &#123;    @Autowired    Proto proto;    public Proto getProto() &#123;        return proto;    &#125;&#125;\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2019-01-05T11:30:00+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2019-01-05T11:30:00+09:00","description":"IoC 는 Inversion of Control의 약자로 어떤 객체가 사용하는 의존 객체를 직접 만들어 사용하는게 아니라, 주입 받아 사용하는 방법으로 DI(Dependency Injection)이라고도 한다. 다시 말하면 객체 생명주기를 관리하며 DI 패턴을 제공하여 비즈니스 로직에 집중할 수 있도록 한다.","headline":"Spring 핵심 기술 (IoC, Bean - 01)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/01/05/spring-core-ioc-01/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2019/01/05/spring-core-ioc-01/","keywords":"java, spring boot, IoC, Bean"}</script>
+    <meta name="description" content="IoC 는 Inversion of Control의 약자로 어떤 객체가 사용하는 의존 객체를 직접 만들어 사용하는게 아니라, 주입 받아 사용하는 방법으로 DI(Dependency Injection)이라고도 한다. 다시 말하면 객체 생명주기를 관리하며 DI 패턴을 제공하여 비즈니스 로직에 집중할 수 있도록 한다.">
+<meta name="keywords" content="java,spring boot,IoC,Bean">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Spring 핵심 기술 (IoC, Bean - 01)">
+<meta property="og:url" content="http://yoursite.com/2019/01/05/spring-core-ioc-01/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="IoC 는 Inversion of Control의 약자로 어떤 객체가 사용하는 의존 객체를 직접 만들어 사용하는게 아니라, 주입 받아 사용하는 방법으로 DI(Dependency Injection)이라고도 한다. 다시 말하면 객체 생명주기를 관리하며 DI 패턴을 제공하여 비즈니스 로직에 집중할 수 있도록 한다.">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.747Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spring 핵심 기술 (IoC, Bean - 01)">
+<meta name="twitter:description" content="IoC 는 Inversion of Control의 약자로 어떤 객체가 사용하는 의존 객체를 직접 만들어 사용하는게 아니라, 주입 받아 사용하는 방법으로 DI(Dependency Injection)이라고도 한다. 다시 말하면 객체 생명주기를 관리하며 DI 패턴을 제공하여 비즈니스 로직에 집중할 수 있도록 한다.">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Spring 핵심 기술 (IoC, Bean - 01)
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2019-01-05T11:30:00+09:00">
+	
+		    Jan 05, 2019
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/Spring-핵심-기술/">Spring 핵심 기술</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>IoC 는 Inversion of Control의 약자로 어떤 객체가 사용하는 의존 객체를 직접 만들어 사용하는게 아니라, 주입 받아 사용하는 방법으로 DI(Dependency Injection)이라고도 한다. 다시 말하면 객체 생명주기를 관리하며 DI 패턴을 제공하여 비즈니스 로직에 집중할 수 있도록 한다.</p>
+<a id="more"></a>  
+<h2 id="스프링-IoC-컨테이너"><a href="#스프링-IoC-컨테이너" class="headerlink" title="스프링 IoC 컨테이너"></a>스프링 IoC 컨테이너</h2><ul>
+<li>BeanFactory - 가장 최상위 핵심 인터페이스</li>
+<li>애플리케이션 컴포넌트의 중앙 저장소</li>
+<li>빈 설정 소스로 부터 빈 정의를 읽어들이고, 빈을 구성/제공</li>
+</ul>
+<p>스프링 빈(Bean)</p>
+<ul>
+<li>스프링 IoC 컨테이너가 관리하는 객체</li>
+<li>싱글톤, 프로토타입 스코프</li>
+<li>라이프사이클 인터페이스 </li>
+<li>@Bean, @Component, @Service, @Repository 등 어노테이션으로 빈 설정</li>
+<li>application.xml 의 <bean> 테크로 빈 설정</bean></li>
+</ul>
+<h2 id="빈-설정-방법"><a href="#빈-설정-방법" class="headerlink" title="빈 설정 방법"></a>빈 설정 방법</h2><h3 id="스프링-설정파일을-통한-빈-등록"><a href="#스프링-설정파일을-통한-빈-등록" class="headerlink" title="스프링 설정파일을 통한 빈 등록"></a>스프링 설정파일을 통한 빈 등록</h3><ul>
+<li>고전적인 방법으로 application.xml 설정을 통해 빈을 등록</li>
+<li><bean> </bean>을 통해 빈으로 등록할 class를 설정</li>
+<li><property> </property>를 통해 빈 객체를 주입</li>
+</ul>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"bookService"</span> <span class="attr">class</span>=<span class="string">"com.ex.forblog.book.BookService"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"bookRepository"</span> <span class="attr">ref</span>=<span class="string">"bookRepository"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"bookRepository"</span> <span class="attr">class</span>=<span class="string">"com.ex.forblog.book.BookRepository"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="component-scan을-이용한-빈-등록"><a href="#component-scan을-이용한-빈-등록" class="headerlink" title="component-scan을 이용한 빈 등록"></a>component-scan을 이용한 빈 등록</h3><ul>
+<li>위 방법은 빈을 하나하나 등록해야하는 불편</li>
+<li><component-scan> 을 통해 어노테이션을 통해 빈으로 설정한 빈 class들을 찾아 등록</component-scan></li>
+</ul>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:context</span>=<span class="string">"http://www.springframework.org/schema/context"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">context:component-scan</span> <span class="attr">base-package</span>=<span class="string">"com.ex.forblog"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="JAVA-config을-이용한-빈-등록"><a href="#JAVA-config을-이용한-빈-등록" class="headerlink" title="JAVA config을 이용한 빈 등록"></a>JAVA config을 이용한 빈 등록</h3><ul>
+<li>최근(꾀 오래전?) 에는 xml파일을 사용하지 않고 JAVA를 사용하여 등록</li>
+<li>@Bean 통해 빈으로 등록</li>
+<li>@Autowire를 통해 빈 객체 주입</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ApplicationConfig</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> BookRepository <span class="title">bookRepository</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> BookRepository();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> BookService <span class="title">bookService</span><span class="params">()</span></span>&#123;</span><br><span class="line">        BookService bookService = <span class="keyword">new</span> BookService();</span><br><span class="line">        bookService.setBookRepository(bookRepository());</span><br><span class="line">        <span class="keyword">return</span> bookService;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="ComponentScan을-이용한-빈-등록"><a href="#ComponentScan을-이용한-빈-등록" class="headerlink" title="ComponentScan을 이용한 빈 등록"></a>ComponentScan을 이용한 빈 등록</h3><ul>
+<li>xml과 마찬가지로 JAVA config 또한 @ComponentScan으로 basePackageClasses로 지정된 클래스 하위에서 어노테이션을 통해 빈으로 설정한 빈 class들을 찾아 등록</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@ComponentScan</span>(basePackageClasses = Application<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">class</span> <span class="title">ApplicationConfig</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="SpringBootApplication을-이용한-빈-등록"><a href="#SpringBootApplication을-이용한-빈-등록" class="headerlink" title="SpringBootApplication을 이용한 빈 등록"></a>SpringBootApplication을 이용한 빈 등록</h3><ul>
+<li>위의 과정들을 spring boot에서는 @SpringBootApplication를 통해 지원</li>
+<li>@SpringBootApplication을 확인해 보면 @ComponentScan를 확인 가능  </li>
+<li>Application 클래스 하위 패키지에서 빈 class들을 찾아 등록한다.</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        SpringApplication.run(Application<span class="class">.<span class="keyword">class</span>, <span class="title">args</span>)</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Inherited</span></span><br><span class="line"><span class="meta">@SpringBootConfiguration</span></span><br><span class="line"><span class="meta">@EnableAutoConfiguration</span></span><br><span class="line"><span class="meta">@ComponentScan</span>(excludeFilters = &#123;</span><br><span class="line">		<span class="meta">@Filter</span>(type = FilterType.CUSTOM, classes = TypeExcludeFilter<span class="class">.<span class="keyword">class</span>),</span></span><br><span class="line"><span class="class">		@<span class="title">Filter</span>(<span class="title">type</span> </span>= FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter<span class="class">.<span class="keyword">class</span>) &#125;)</span></span><br><span class="line"><span class="class"><span class="title">public</span> @<span class="title">interface</span> <span class="title">SpringBootApplication</span> </span>&#123;</span><br><span class="line"> ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Autowired"><a href="#Autowired" class="headerlink" title="@Autowired"></a>@Autowired</h3><p>IoC에 등록된 빈을 사용하는 방법은 @Autowired 어노테이션을 이용하여 객체의 타입에 해당하는 빈을 찾아 주입받아 사용한다. </p>
+<ul>
+<li><p>기본값은 true로 해당 객체 다입을 못찾으면 어플리케이션 구동 실패</p>
+</li>
+<li><p>같은 타입의 빈이 여러개 일 때 @Primary 통해 주입</p>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BookRepository</span> </span>&#123;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Repository</span> <span class="meta">@Primary</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HsBookRepository</span> <span class="keyword">implements</span> <span class="title">BookRepository</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Repository</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBookRepository</span> <span class="keyword">implements</span> <span class="title">BookRepository</span></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BookService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">public</span> BookRepository bookRepository;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>같은 타입의 빈이 여러개 일 때 @Qualifier를 통해 주입</p>
+</li>
+<li><p>@Qualifier 사용할 경우 설정이 따로 없으면 빈에 등록된 이름은 다음과 같이 camel 표기법을 사용</p>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BookRepository</span> </span>&#123;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Repository</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HsBookRepository</span> <span class="keyword">implements</span> <span class="title">BookRepository</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Repository</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBookRepository</span> <span class="keyword">implements</span> <span class="title">BookRepository</span></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BookService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span> <span class="meta">@Qualifier</span>(<span class="string">"hsBookRepository"</span>)</span><br><span class="line">    <span class="keyword">public</span> BookRepository bookRepository;</span><br><span class="line"></span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><h3 id="여러-빈-주입-가능"><a href="#여러-빈-주입-가능" class="headerlink" title="여러 빈 주입 가능"></a>여러 빈 주입 가능</h3></li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BookService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    List&lt;BookRepository&gt; bookRepositories;    </span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Commponent와-ComponentScan"><a href="#Commponent와-ComponentScan" class="headerlink" title="@Commponent와 @ComponentScan"></a>@Commponent와 @ComponentScan</h3><ul>
+<li>@Commponent는 빈으로 등록할 class</li>
+<li>@Commponent는 @Controller, @Service, @Repository로 구체화 되어 사용</li>
+<li>@ComponentScan는 특정 패키지 안의 클래스들을 스캔하여 빈 등록</li>
+<li>실제 스캐닝은 ConfigurationClassPostProcessor라는 BeanFactoryPostProcessor에<br>의해 처리</li>
+</ul>
+<h2 id="빈-스코프"><a href="#빈-스코프" class="headerlink" title="빈 스코프"></a>빈 스코프</h2><ul>
+<li>빈은 싱글톤, 프로토타입 스코프를 가짐</li>
+<li>스코프 기본은 싱글톤, @Scope를 통해 설정 가능</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Single</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Component</span> <span class="meta">@Scope</span>(<span class="string">"prototype"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Proto</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>싱글톤 빈이 프로토타입 빈을 참조하려면 @Scope에 proxyMode 설정</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span> <span class="meta">@Scope</span>(value = <span class="string">"prototype"</span>, proxyMode = ScopedProxyMode.TARGET_CLASS)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Proto</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Single</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    Proto proto;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Proto <span class="title">getProto</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> proto;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/Bean/">Bean</a> <a class="tag tag--primary tag--small t-link" href="/tags/IoC/">IoC</a> <a class="tag tag--primary tag--small t-link" href="/tags/java/">java</a> <a class="tag tag--primary tag--small t-link" href="/tags/spring-boot/">spring boot</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/06/spring-core-ioc-02/" data-tooltip="Spring 핵심 기술 (IoC, Bean - 02)" aria-label="PREVIOUS: Spring 핵심 기술 (IoC, Bean - 02)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/12/08/spring-boot-start-04/" data-tooltip="Spring Boot 정리(04)" aria-label="NEXT: Spring Boot 정리(04)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/05/spring-core-ioc-01/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/05/spring-core-ioc-01/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/05/spring-core-ioc-01/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/06/spring-core-ioc-02/" data-tooltip="Spring 핵심 기술 (IoC, Bean - 02)" aria-label="PREVIOUS: Spring 핵심 기술 (IoC, Bean - 02)">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/12/08/spring-boot-start-04/" data-tooltip="Spring Boot 정리(04)" aria-label="NEXT: Spring Boot 정리(04)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/05/spring-core-ioc-01/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/05/spring-core-ioc-01/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/05/spring-core-ioc-01/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/05/spring-core-ioc-01/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/05/spring-core-ioc-01/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/05/spring-core-ioc-01/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

@@ -1,0 +1,511 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>Spring 핵심 기술 (Resource 추상화) - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"java.net.URL을 org.springframework.core.io.Resource로 감싸 추상화 한 것으로 클래스패스 기준으로 리소스 읽어오는 기능 부재, ServletContext를 기준으로 상대 경로로 읽어오는 기능 부재, 새로운 핸들러를 등록하여 특별한 URL 접미사를 만들어 사용할 수는 있지만 구현이 복잡하고 편의성 메소드가 부족하여 추상화하였다. \n  \n인터페이스\nResource extends InputStreamSource\ngetInputStream() \nexitst() : 리소스가 존재하는지 확인\nisReadable() : 리소스를 읽을 수 있는지 확인\nisFile() : 리소스가 파일인지 확인\nisOpen() : 리소스가 열려있는지 확인\ngetDescription() : 전체 경로 포함한 파일 이름 또는 실제 URL \n…\n\n구현체\nUrlResource: java.net.URL 참고, 기본으로 지원하는 프로토콜 http, https, ftp, file, jar. \nClassPathResource: 지원하는 접두어 classpath: \nFileSystemResource \nServletContextResource: 웹 애플리케이션 루트에서 상대 경로로 리소스 찾는다. \n… \n\n리소스 읽어오기\nResource의 타입은 locaion 문자열과 ApplicationContext의 타입에 따라 결정\nClassPathXmlApplicationContext -&gt; ClassPathResource\nFileSystemXmlApplicationContext -&gt; FileSystemResource\nWebApplicationContext -&gt; ServletContextResource \n\n\nApplicationContext의 타입에 상관없이 리소스 타입을 강제하려면 java.net.URL 접두어(+ classpath:)중 하나를 사용 가능\nclasspath:me/whiteship/config.xml -&gt; ClassPathResource \nfile:///some/resource/path/config.xml -&gt; FileSystemResource \n\n\n\n123456789101112131415161718@Componentpublic class AppRunner implements ApplicationRunner&#123;    @Autowired    ResourceLoader resourceLoader;    @Override    public void run(ApplicationArguments args) throws Exception &#123;        System.out.println(resourceLoader.getClass());        Resource resource = resourceLoader.getResource(\"classpath:text.txt\");        System.out.println(resource.getClass());        System.out.println(resource.exists());        System.out.println(resource.getDescription());        Files.lines(Paths.get(resource.getURI())).forEach(System.out::println);    &#125;&#125;\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2019-01-16T21:36:32+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2019-01-16T21:36:32+09:00","description":"java.net.URL을 org.springframework.core.io.Resource로 감싸 추상화 한 것으로 클래스패스 기준으로 리소스 읽어오는 기능 부재, ServletContext를 기준으로 상대 경로로 읽어오는 기능 부재, 새로운 핸들러를 등록하여 특별한 URL 접미사를 만들어 사용할 수는 있지만 구현이 복잡하고 편의성 메소드가 부족하여 추상화하였다. ","headline":"Spring 핵심 기술 (Resource 추상화)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/01/16/spring-core-resource/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2019/01/16/spring-core-resource/","keywords":"java, spring boot, Resource"}</script>
+    <meta name="description" content="java.net.URL을 org.springframework.core.io.Resource로 감싸 추상화 한 것으로 클래스패스 기준으로 리소스 읽어오는 기능 부재, ServletContext를 기준으로 상대 경로로 읽어오는 기능 부재, 새로운 핸들러를 등록하여 특별한 URL 접미사를 만들어 사용할 수는 있지만 구현이 복잡하고 편의성 메소드가 부족하여 추상화">
+<meta name="keywords" content="java,spring boot,Resource">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Spring 핵심 기술 (Resource 추상화)">
+<meta property="og:url" content="http://yoursite.com/2019/01/16/spring-core-resource/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="java.net.URL을 org.springframework.core.io.Resource로 감싸 추상화 한 것으로 클래스패스 기준으로 리소스 읽어오는 기능 부재, ServletContext를 기준으로 상대 경로로 읽어오는 기능 부재, 새로운 핸들러를 등록하여 특별한 URL 접미사를 만들어 사용할 수는 있지만 구현이 복잡하고 편의성 메소드가 부족하여 추상화">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.747Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spring 핵심 기술 (Resource 추상화)">
+<meta name="twitter:description" content="java.net.URL을 org.springframework.core.io.Resource로 감싸 추상화 한 것으로 클래스패스 기준으로 리소스 읽어오는 기능 부재, ServletContext를 기준으로 상대 경로로 읽어오는 기능 부재, 새로운 핸들러를 등록하여 특별한 URL 접미사를 만들어 사용할 수는 있지만 구현이 복잡하고 편의성 메소드가 부족하여 추상화">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            Spring 핵심 기술 (Resource 추상화)
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2019-01-16T21:36:32+09:00">
+	
+		    Jan 16, 2019
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/Spring-핵심-기술/">Spring 핵심 기술</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>java.net.URL을 org.springframework.core.io.Resource로 감싸 추상화 한 것으로 클래스패스 기준으로 리소스 읽어오는 기능 부재, ServletContext를 기준으로 상대 경로로 읽어오는 기능 부재, 새로운 핸들러를 등록하여 특별한 URL 접미사를 만들어 사용할 수는 있지만 구현이 복잡하고 편의성 메소드가 부족하여 추상화하였다. </p>
+<a id="more"></a>  
+<h2 id="인터페이스"><a href="#인터페이스" class="headerlink" title="인터페이스"></a>인터페이스</h2><ul>
+<li>Resource extends InputStreamSource</li>
+<li>getInputStream() </li>
+<li>exitst() : 리소스가 존재하는지 확인</li>
+<li>isReadable() : 리소스를 읽을 수 있는지 확인</li>
+<li>isFile() : 리소스가 파일인지 확인</li>
+<li>isOpen() : 리소스가 열려있는지 확인</li>
+<li>getDescription() : 전체 경로 포함한 파일 이름 또는 실제 URL </li>
+<li>…</li>
+</ul>
+<h2 id="구현체"><a href="#구현체" class="headerlink" title="구현체"></a>구현체</h2><ul>
+<li>UrlResource: java.net.URL 참고, 기본으로 지원하는 프로토콜 http, https, ftp, file, jar. </li>
+<li>ClassPathResource: 지원하는 접두어 classpath: </li>
+<li>FileSystemResource </li>
+<li>ServletContextResource: 웹 애플리케이션 루트에서 상대 경로로 리소스 찾는다. </li>
+<li>… </li>
+</ul>
+<h2 id="리소스-읽어오기"><a href="#리소스-읽어오기" class="headerlink" title="리소스 읽어오기"></a>리소스 읽어오기</h2><ul>
+<li>Resource의 타입은 locaion 문자열과 ApplicationContext의 타입에 따라 결정<ul>
+<li>ClassPathXmlApplicationContext -&gt; ClassPathResource</li>
+<li>FileSystemXmlApplicationContext -&gt; FileSystemResource</li>
+<li>WebApplicationContext -&gt; ServletContextResource </li>
+</ul>
+</li>
+<li>ApplicationContext의 타입에 상관없이 리소스 타입을 강제하려면 java.net.URL 접두어(+ classpath:)중 하나를 사용 가능<ul>
+<li>classpath:me/whiteship/config.xml -&gt; ClassPathResource </li>
+<li>file:///some/resource/path/config.xml -&gt; FileSystemResource </li>
+</ul>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AppRunner</span> <span class="keyword">implements</span> <span class="title">ApplicationRunner</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    ResourceLoader resourceLoader;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(ApplicationArguments args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.out.println(resourceLoader.getClass());</span><br><span class="line"></span><br><span class="line">        Resource resource = resourceLoader.getResource(<span class="string">"classpath:text.txt"</span>);</span><br><span class="line">        System.out.println(resource.getClass());</span><br><span class="line"></span><br><span class="line">        System.out.println(resource.exists());</span><br><span class="line">        System.out.println(resource.getDescription());</span><br><span class="line">        Files.lines(Paths.get(resource.getURI())).forEach(System.out::println);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/Resource/">Resource</a> <a class="tag tag--primary tag--small t-link" href="/tags/java/">java</a> <a class="tag tag--primary tag--small t-link" href="/tags/spring-boot/">spring boot</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/18/electron-tutorial/" data-tooltip="Electron 애플리케이션 만들기" aria-label="PREVIOUS: Electron 애플리케이션 만들기">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/06/spring-core-ioc-02/" data-tooltip="Spring 핵심 기술 (IoC, Bean - 02)" aria-label="NEXT: Spring 핵심 기술 (IoC, Bean - 02)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/16/spring-core-resource/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/16/spring-core-resource/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/16/spring-core-resource/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/18/electron-tutorial/" data-tooltip="Electron 애플리케이션 만들기" aria-label="PREVIOUS: Electron 애플리케이션 만들기">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/01/06/spring-core-ioc-02/" data-tooltip="Spring 핵심 기술 (IoC, Bean - 02)" aria-label="NEXT: Spring 핵심 기술 (IoC, Bean - 02)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/16/spring-core-resource/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/16/spring-core-resource/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/16/spring-core-resource/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/01/16/spring-core-resource/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/01/16/spring-core-resource/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/01/16/spring-core-resource/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>

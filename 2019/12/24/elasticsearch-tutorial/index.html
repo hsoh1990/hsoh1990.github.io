@@ -1,0 +1,612 @@
+
+<!DOCTYPE html>
+<html lang="">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="hsoh&#39;s blog">
+    <title>elasticsearch 튜토리얼 - hsoh&#39;s blog</title>
+    <meta name="author" content="hsoh">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"},"articleBody":"elasticsearch란 아파치 Lucene 기반으로 개발한 오픈소스 검색엔진으로 많은 양의 데이터를 보관하고 실시간으로 분석할 수 있게 해준다. JSON 기반의 비정형 데이터 분산 검색과 분석을 지원하며, 다양한 기능을 플러그인 형태로 구현하여 적용할 수 있는 특징을 가진다. 본 문서에서는 설치 및 사용법(spring boot 연동)을 다룬다.  \nTable of Contents\nelasticsearch 란\nInstallation\n기본 사용법\nReference\nContributors\n\nElasticsearch 란Elasticsearch는 모든 유형의 데이터에 대한 실시간 검색 및 분석을 제공하는 오픈소스 검색 엔진으로 구조화되거나 구조화되지 않은 텍스트, 숫자 데이터 또는 지리 공간 데이터에 관계없이 Elasticsearch는 빠른 검색을 지원하는 방식으로 효율적으로 저장하고 색인을 생성 할 수 있다. \n단순한 데이터 검색을 넘어 정보를 집계하여 데이터의 추세와 패턴을 발견 할 수 있고 데이터 및 쿼리 볼륨이 증가함에 따라 Elasticsearch의 분산 특성으로 인해 배포가 원활하게 확장 될 수 있습니다.\nElasticsearch는 Elastic Stack의 중심에있는 분산 검색 및 분석 엔진이다. Logstash and Beats를 사용하면 데이터를 수집, 집계 및 보강하고 Elasticsearch에 저장할 수 있고, Kibana를 사용하면 대화식으로 데이터를 탐색, 시각화, 공유, 데이터를 관리 등이 가능하다.\nelasticsearch와 관계형 DB 비교\n\n\nElasticsearch\n관계형 DB\n\n\n\n\nIndex\nDatabase\n\n\nType\nTable\n\n\nDocument\nRow\n\n\nField\nColumn\n\n\nMapping\nSchema\n\n\n\n\n\n\nElasticsearch\n관계형 DB\nCRUD\n\n\n\n\nPOST\nINSERT\nCREATE\n\n\nGET\nSELECT\nREAD\n\n\nPUT\nUPDATE\nUPDATE\n\n\nDELETE\nDELETE\nDELETE\n\n\n\nInstallation튜토리얼 환경ubuntu 18.04,  openjdk 11.0.5\nElasticsearch 설치123$ wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.5.1-amd64.deb$ dpkg -i elasticsearch-7.5.1-amd64.deb$ sudo systemctl enable elasticsearch.service\nElasticsearch 실행 및 동작 테스트12$ sudo service elasticsearch start   $ curl -X GET 'localhost:9200'\nElasticsearch 종료1$ sudo service elasticsearch stop\n기본 사용법Elasticsearch는 REST API를 통해 CRUD가 가능. URL의 계층에 따라 /index/type/document/field로 구분하여 사용.\nIndex CRD123$ curl -X PUT http://localhost:9200/'class name'$ curl -X GET http://localhost:9200/'class name'?pretty$ curl -X DELETE http://localhost:9200/'class name'\nDocument CRUDdocument는 index가 있을때 만들어도 되고, index가 없을때도 index명과 type명을 명시해주면 바로 document 생성이 가능.\n123456$ curl -X POST http://localhost:9200/'class name'/'type name'/'document name' -H 'Content-type:application/json' -d '&#123;\"title\":\"algorithm\",\"professor\":\"john\"&#125;'$ curl -X POST http://localhost:9200/'class name'/'type name'/'document name' -H 'Content-type:application/json' -d @data.json$ curl -X GET http://localhost:9200/'class name'/'type name'/'document name'$ curl -X DELETE http://localhost:9200/'class name'/'type name'/'document name'\n필드에 대한 업데이트 방법은 다음과 같다.\n12$ curl -X POST http://localhost:9200/'class name'/'type name'/'document name'/_update -H 'Content-type:application/json' -d '&#123;\"doc\":&#123;\"unit\":1&#125;&#125;'$ curl -X POST http://localhost:9200/'class name'/'type name'/'document name'/_update -H 'Content-type:application/json' -d '&#123;\"script\":\"ctx._source.unit += 5\"&#125;'\n데이터를 bulk로 저장하려면 json 파일에 index, type, id를 지정하여 데이터를 입력하여 저장한 후 다음 명령어를 통해 저장.\n1234bulk.json&#123;\"index\":&#123; \"_index\":\"classes\",\"_type\":\"class\",\"_id\":\"1\"&#125;&#125;&#123;\"title\":\"algorithm\",\"Professor\":\"john\"&#125;\n1curl -X POST http://localhost:9200/_bulk --data-binary -H 'Content-type:application/json' -d @bulk.json\nMapping매핑없이 elastic search에 데이터를 넣을 수 있지만 매우 위험하다. 이유는 타입형에서도 혼선이 올 수 있으며,  Kibana로 시각화 할때 적절한 출력이 안될 수 있는 등 다양한 위험 요소가 존재 힌다. 따라서 데이터를 입력하기 전에 Mapping을 통해 자료형을 저장한 후 데이터를 입력.\n데이터 관리시에는 매핑을 먼저 추가하고, 데이터가 이미 있을때는 매핑을 추후에 추가하여, 분석이나 시각화할때 도움이 될 수 있음.\nMapping 방법은 다음과 같다.\n1234567891011121314mapping.json&#123;\t\"class\" : &#123;\t\t\"properties\" : &#123;\t\t\t\"title\" : &#123;\t\t\t\t\"type\" : \"keyword\"\t\t\t&#125;,\t\t\t\"professor\" : &#123;\t\t\t\t\"type\" : \"keyword\"\t\t\t&#125;\t\t&#125;\t&#125;&#125;\n1$ curl -X PUT http://localhost:9200/'class name'/'type name'/_mapping?include_type_name=true&amp;pretty -H 'Content-type:application/json' -d @mapping.json\ninclude_type_name=true가 없으면 illegal_argument_exception 에러가 발생하여 추가.\nSearch전체 조회는 검색조건 없이 조회하면 되고, 검색 조건을 통한 방법은 url에서 query 파라미터를 추가 하는 방법과 request body를 추가하는 방법 존재.\n123$ curl -X GET http://localhost:9200/'class name'/'type name'/_search$ curl -X GET http://localhost:9200/'class name'/'type name'/_search?&amp;q=points:30 $ curl -X GET http://localhost:9200/'class name'/'type name'/_search -d '&#123;\"query\":&#123;\"term\":&#123;\"points\":30&#125;&#125;&#125;' -H 'Content-type:application/json'\nrequest body에는 여러가지 옵션이 존재함. 자세히 살펴보려면 문서를 확인.\nAggregation document 안에서 조합을 통해서 어떠한 값을 도출할때 쓰이는 방법을 Aggregation 이라한다. aggregation의 종류는 Bucketing, Metric, Matrix, Pipeline이 있으며, 구조는 다음과 같다.\n123456789\"aggregations\" : &#123;\t\"&lt;aggregation_name&gt;\" : &#123;\t\t\"&lt;aggregation_type&gt;\" : &#123;\t\t&#125;\t\t[,\"meta\":&#123;[&lt;meta_data_body&gt;]&#125;]?\t\t[,\"aggregations\":&#123;[&lt;sub_aggregation&gt;]+&#125;]&#125;]?\t&#125;\t[, \"&lt;aggregation_name_2&gt;\":&#123;...&#125;]*&#125;\n\nBucketing\n버킷을 작성하는 Aggregation으로, 각 버킷은 키 및 문서 기준과 연결.  Aggregation이 실행될 때 모든 버킷 기준이 컨텍스트의 모든 document에서 평가되고 기준이 일치하면 문서가 관련 버킷에 “fall in”한 것으로 간주. Aggregation  프로세스가 끝날 때마다 버킷 목록이 생김. 각 버킷에는 “belong”된 문서 세트 존재.\n\nMetric\n일련의 문서에서 메트릭을 추적하고 계산하는 Aggregation.\n\nMatrix\n여러 필드에서 작동하고 요청 된 문서 필드에서 추출 된 값을 기반으로 매트릭스 결과를 생성하는 Aggregation.\n\nPipeline\n다른 집계 및 관련 메트릭의 결과를 집계하는 Aggregation \n\n\n하위 예제에서 사용할 document\n1234567891011121314151617181920212223242526272829303132 basketball_mapping.json  &#123;\t\"record\" : &#123;\t\t\"properties\" : &#123;\t\t\t\"team\" : &#123;\t\t\t\t\"type\" : \"text\",\t\t\t\t\"fielddata\" : true\t\t\t&#125;,\t\t\t\"name\" : &#123;\t\t\t\t\"type\" : \"text\",\t\t\t\t\"fielddata\" : true\t\t\t&#125;,\t\t\t\"points\" : &#123;\t\t\t\t\"type\" : \"long\"\t\t\t&#125;,\t\t\t\"rebounds\" : &#123;\t\t\t\t\"type\" : \"long\"\t\t\t&#125;,\t\t\t\"assists\" : &#123;\t\t\t\t\"type\" : \"long\"\t\t\t&#125;,\t\t\t\"blocks\" : &#123;\t\t\t\t\"type\" : \"long\"\t\t\t&#125;,\t\t\t\"submit_date\" : &#123;\t\t\t\t\"type\" : \"date\",\t\t\t\t\"format\" : \"yyyy-MM-dd\"\t\t\t&#125;\t\t&#125;\t&#125;&#125;\n12345678910twoteam_basketball.json   \"index\" : &#123; \"_index\" : \"basketball\", \"_type\" : \"record\", \"_id\" : \"1\" &#125; &#125;&#123;\"team\" : \"Chicago\",\"name\" : \"Michael Jordan\", \"points\" : 30,\"rebounds\" : 3,\"assists\" : 4, \"blocks\" : 3, \"submit_date\" : \"1996-10-11\"&#125;&#123; \"index\" : &#123; \"_index\" : \"basketball\", \"_type\" : \"record\", \"_id\" : \"2\" &#125; &#125;&#123;\"team\" : \"Chicago\",\"name\" : \"Michael Jordan\",\"points\" : 20,\"rebounds\" : 5,\"assists\" : 8, \"blocks\" : 4, \"submit_date\" : \"1996-10-13\"&#125;&#123; \"index\" : &#123; \"_index\" : \"basketball\", \"_type\" : \"record\", \"_id\" : \"3\" &#125; &#125;&#123;\"team\" : \"LA\",\"name\" : \"Kobe Bryant\",\"points\" : 30,\"rebounds\" : 2,\"assists\" : 8, \"blocks\" : 5, \"submit_date\" : \"2014-10-13\"&#125;&#123; \"index\" : &#123; \"_index\" : \"basketball\", \"_type\" : \"record\", \"_id\" : \"4\" &#125; &#125;&#123;\"team\" : \"LA\",\"name\" : \"Kobe Bryant\",\"points\" : 40,\"rebounds\" : 4,\"assists\" : 8, \"blocks\" : 6, \"submit_date\" : \"2014-11-13\"&#125;\nMetric Aggregation document 안에서 조합을 통해서 어떠한 값을 도출할때 쓰이는 방법을 Aggregation 이라하고 그 중 최댓값, 최솟값, 평균값 등 산술관련한 연산이 필요할 경우 metric aggregations을 사용한다. 간단한 예로 최대, 최소, 평균값을 구하면 다음과 같다.\n123456avg_metric.json&#123;\t\"size\" : 0,\t\"aggs\" : &#123;\"avg_score\" : &#123; \"avg\" : &#123; \"field\" : \"points\"&#125;&#125;&#125;&#125;\n1$ curl -X GET http://localhost:9200/_search\\?pretty -H 'content-type:application/json' --data-binary @avg_metric.json\n123456min_metric.json&#123;\t\"size\" : 0,\t\"aggs\" : &#123;\"avg_score\" : &#123; \"min\" : &#123; \"field\" : \"points\"&#125;&#125;&#125;&#125;\n1$ curl -X GET http://localhost:9200/_search\\?pretty -H 'content-type:application/json' --data-binary @avg_metric.json\n123456max_metric.json&#123;\t\"size\" : 0,\t\"aggs\" : &#123;\"avg_score\" : &#123; \"max\" : &#123; \"field\" : \"points\"&#125;&#125;&#125;&#125;\n1$ curl -X GET http://localhost:9200/_search\\?pretty -H 'content-type:application/json' --data-binary @maxcat st\t_metric.json\n123456stats_metric.json&#123;\t\"size\" : 0,\t\"aggs\" : &#123;\"avg_score\" : &#123; \"stats\" : &#123; \"field\" : \"points\"&#125;&#125;&#125;&#125;\n1$ curl -X GET http://localhost:9200/_search\\?pretty -H 'content-type:application/json' --data-binary @stats_metric.json\nmetrics aggregation의 옵션들을 자세히 살펴보려면 문서를 확인.\nBucket Aggregationbucket aggregation은 group by의 개념과 흡사하다. 각 필드에서 값을 계산하지는 않지만 각 bucket은 키 및 document criterion과 연결하여 document bucket을 생성한다.\n123456terms_aggs.json &#123;\t\"size\" : 0,\t\"aggs\" : &#123;\"players\" : &#123;\"terms\" : &#123;\"field\" : \"team\"&#125;&#125;&#125;&#125;\n1$ curl -XGET http://localhost:9200/_search\\?pretty -H 'content-type:application/json' --data-binary @terms_aggs.json\nbucket과 metric을 조합하면 특정 필드별 계산된 값을 얻을 수 있다.\n12345678910111213stats_by_team.json&#123;\t\"size\" : 0,\t\"aggs\" : &#123;\t\t\"team_stats\" : &#123;\t\t    \"terms\" : &#123;\"field\" : \"team\"&#125;,\t\t\t\"aggs\" : &#123;\t\t\t    \"stats_score\" : &#123;\"stats\" : &#123;\"field\" : \"points\"&#125;&#125;\t\t\t&#125;\t\t&#125;\t&#125;&#125;\n1$ curl -XGET http://localhost:9200/_search\\?pretty -H 'content-type:application/json' --data-binary @stats_by_team.json\nbucket aggregation의 옵션들을 자세히 살펴보려면 문서를 확인.\nReference\nElastic Stack and Product Documentation\nhttps://github.com/minsuk-heo/BigData\n\nContributors\n오형석(ohs4123@gmail.com)\n\n","dateCreated":"2019-12-24T15:09:45+09:00","dateModified":"2021-04-12T14:32:47+09:00","datePublished":"2019-12-24T15:09:45+09:00","description":"elasticsearch란 아파치 Lucene 기반으로 개발한 오픈소스 검색엔진으로 많은 양의 데이터를 보관하고 실시간으로 분석할 수 있게 해준다. JSON 기반의 비정형 데이터 분산 검색과 분석을 지원하며, 다양한 기능을 플러그인 형태로 구현하여 적용할 수 있는 특징을 가진다. 본 문서에서는 설치 및 사용법(spring boot 연동)을 다룬다.","headline":"elasticsearch 튜토리얼","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"http://yoursite.com/2019/12/24/elasticsearch-tutorial/"},"publisher":{"@type":"Organization","name":"hsoh","sameAs":["https://github.com/hsoh1990","mailto:ohs4123@gmail.com"],"image":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/708139c079b1267f89f8eaad82c1529d"}},"url":"http://yoursite.com/2019/12/24/elasticsearch-tutorial/","keywords":"elasticsearch"}</script>
+    <meta name="description" content="elasticsearch란 아파치 Lucene 기반으로 개발한 오픈소스 검색엔진으로 많은 양의 데이터를 보관하고 실시간으로 분석할 수 있게 해준다. JSON 기반의 비정형 데이터 분산 검색과 분석을 지원하며, 다양한 기능을 플러그인 형태로 구현하여 적용할 수 있는 특징을 가진다. 본 문서에서는 설치 및 사용법(spring boot 연동)을 다룬다.">
+<meta name="keywords" content="elasticsearch">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="elasticsearch 튜토리얼">
+<meta property="og:url" content="http://yoursite.com/2019/12/24/elasticsearch-tutorial/index.html">
+<meta property="og:site_name" content="hsoh&#39;s blog">
+<meta property="og:description" content="elasticsearch란 아파치 Lucene 기반으로 개발한 오픈소스 검색엔진으로 많은 양의 데이터를 보관하고 실시간으로 분석할 수 있게 해준다. JSON 기반의 비정형 데이터 분산 검색과 분석을 지원하며, 다양한 기능을 플러그인 형태로 구현하여 적용할 수 있는 특징을 가진다. 본 문서에서는 설치 및 사용법(spring boot 연동)을 다룬다.">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2021-04-12T05:32:47.734Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="elasticsearch 튜토리얼">
+<meta name="twitter:description" content="elasticsearch란 아파치 Lucene 기반으로 개발한 오픈소스 검색엔진으로 많은 양의 데이터를 보관하고 실시간으로 분석할 수 있게 해준다. JSON 기반의 비정형 데이터 분산 검색과 분석을 지원하며, 다양한 기능을 플러그인 형태로 구현하여 적용할 수 있는 특징을 가진다. 본 문서에서는 설치 및 사용법(spring boot 연동)을 다룬다.">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/all.css">
+    <link rel="stylesheet" href="/assets/css/jquery.fancybox.css">
+    <link rel="stylesheet" href="/assets/css/thumbs.css">
+    <link rel="stylesheet" href="/assets/css/tranquilpeak.css">
+    <!--STYLES END-->
+    
+
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">hsoh&#39;s blog</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="Home"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Home</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="Categories"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Categories</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="Tags"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Tags</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="Archives"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Archives</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="About"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">About</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/hsoh1990" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:ohs4123@gmail.com" target="_blank" rel="noopener" title="Mail">
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Mail</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            elasticsearch 튜토리얼
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2019-12-24T15:09:45+09:00">
+	
+		    Dec 24, 2019
+    	
+    </time>
+    
+        <span>in </span>
+        
+    <a class="category-link" href="/categories/elasticsearch/">elasticsearch</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>elasticsearch란 아파치 Lucene 기반으로 개발한 오픈소스 검색엔진으로 많은 양의 데이터를 보관하고 실시간으로 분석할 수 있게 해준다. JSON 기반의 비정형 데이터 분산 검색과 분석을 지원하며, 다양한 기능을 플러그인 형태로 구현하여 적용할 수 있는 특징을 가진다. 본 문서에서는 설치 및 사용법(spring boot 연동)을 다룬다.<br><a id="more"></a>  </p>
+<h2 id="Table-of-Contents"><a href="#Table-of-Contents" class="headerlink" title="Table of Contents"></a><strong>Table of Contents</strong></h2><ul>
+<li><a href="#elasticsearch-란">elasticsearch 란</a></li>
+<li><a href="#Installation">Installation</a></li>
+<li><a href="#기본-사용법">기본 사용법</a></li>
+<li><a href="#Reference">Reference</a></li>
+<li><a href="#Contributors">Contributors</a></li>
+</ul>
+<h2 id="Elasticsearch-란"><a href="#Elasticsearch-란" class="headerlink" title="Elasticsearch 란"></a>Elasticsearch 란</h2><p>Elasticsearch는 모든 유형의 데이터에 대한 실시간 검색 및 분석을 제공하는 오픈소스 검색 엔진으로 구조화되거나 구조화되지 않은 텍스트, 숫자 데이터 또는 지리 공간 데이터에 관계없이 Elasticsearch는 빠른 검색을 지원하는 방식으로 효율적으로 저장하고 색인을 생성 할 수 있다. </p>
+<p>단순한 데이터 검색을 넘어 정보를 집계하여 데이터의 추세와 패턴을 발견 할 수 있고 데이터 및 쿼리 볼륨이 증가함에 따라 Elasticsearch의 분산 특성으로 인해 배포가 원활하게 확장 될 수 있습니다.</p>
+<p>Elasticsearch는 Elastic Stack의 중심에있는 분산 검색 및 분석 엔진이다. Logstash and Beats를 사용하면 데이터를 수집, 집계 및 보강하고 Elasticsearch에 저장할 수 있고, Kibana를 사용하면 대화식으로 데이터를 탐색, 시각화, 공유, 데이터를 관리 등이 가능하다.</p>
+<h5 id="elasticsearch와-관계형-DB-비교"><a href="#elasticsearch와-관계형-DB-비교" class="headerlink" title="elasticsearch와 관계형 DB 비교"></a>elasticsearch와 관계형 DB 비교</h5><table>
+<thead>
+<tr>
+<th>Elasticsearch</th>
+<th>관계형 DB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Index</td>
+<td>Database</td>
+</tr>
+<tr>
+<td>Type</td>
+<td>Table</td>
+</tr>
+<tr>
+<td>Document</td>
+<td>Row</td>
+</tr>
+<tr>
+<td>Field</td>
+<td>Column</td>
+</tr>
+<tr>
+<td>Mapping</td>
+<td>Schema</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Elasticsearch</th>
+<th>관계형 DB</th>
+<th>CRUD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td>INSERT</td>
+<td>CREATE</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>SELECT</td>
+<td>READ</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td>UPDATE</td>
+<td>UPDATE</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td>DELETE</td>
+<td>DELETE</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Installation"><a href="#Installation" class="headerlink" title="Installation"></a>Installation</h2><h5 id="튜토리얼-환경"><a href="#튜토리얼-환경" class="headerlink" title="튜토리얼 환경"></a>튜토리얼 환경</h5><p>ubuntu 18.04,  openjdk 11.0.5</p>
+<h5 id="Elasticsearch-설치"><a href="#Elasticsearch-설치" class="headerlink" title="Elasticsearch 설치"></a>Elasticsearch 설치</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.5.1-amd64.deb</span><br><span class="line">$ dpkg -i elasticsearch-7.5.1-amd64.deb</span><br><span class="line">$ sudo systemctl <span class="built_in">enable</span> elasticsearch.service</span><br></pre></td></tr></table></figure>
+<h5 id="Elasticsearch-실행-및-동작-테스트"><a href="#Elasticsearch-실행-및-동작-테스트" class="headerlink" title="Elasticsearch 실행 및 동작 테스트"></a>Elasticsearch 실행 및 동작 테스트</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ sudo service elasticsearch start   </span><br><span class="line">$ curl -X GET <span class="string">'localhost:9200'</span></span><br></pre></td></tr></table></figure>
+<h5 id="Elasticsearch-종료"><a href="#Elasticsearch-종료" class="headerlink" title="Elasticsearch 종료"></a>Elasticsearch 종료</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ sudo service elasticsearch stop</span><br></pre></td></tr></table></figure>
+<h2 id="기본-사용법"><a href="#기본-사용법" class="headerlink" title="기본 사용법"></a>기본 사용법</h2><p>Elasticsearch는 REST API를 통해 CRUD가 가능. URL의 계층에 따라 /index/type/document/field로 구분하여 사용.</p>
+<h5 id="Index-CRD"><a href="#Index-CRD" class="headerlink" title="Index CRD"></a>Index CRD</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X PUT http://localhost:9200/<span class="string">'class name'</span></span><br><span class="line">$ curl -X GET http://localhost:9200/<span class="string">'class name'</span>?pretty</span><br><span class="line">$ curl -X DELETE http://localhost:9200/<span class="string">'class name'</span></span><br></pre></td></tr></table></figure>
+<h5 id="Document-CRUD"><a href="#Document-CRUD" class="headerlink" title="Document CRUD"></a>Document CRUD</h5><p>document는 index가 있을때 만들어도 되고, index가 없을때도 index명과 type명을 명시해주면 바로 document 생성이 가능.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X POST http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/<span class="string">'document name'</span> -H <span class="string">'Content-type:application/json'</span> -d <span class="string">'&#123;"title":"algorithm","professor":"john"&#125;'</span></span><br><span class="line">$ curl -X POST http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/<span class="string">'document name'</span> -H <span class="string">'Content-type:application/json'</span> -d @data.json</span><br><span class="line"></span><br><span class="line">$ curl -X GET http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/<span class="string">'document name'</span></span><br><span class="line"></span><br><span class="line">$ curl -X DELETE http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/<span class="string">'document name'</span></span><br></pre></td></tr></table></figure>
+<p>필드에 대한 업데이트 방법은 다음과 같다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X POST http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/<span class="string">'document name'</span>/_update -H <span class="string">'Content-type:application/json'</span> -d <span class="string">'&#123;"doc":&#123;"unit":1&#125;&#125;'</span></span><br><span class="line">$ curl -X POST http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/<span class="string">'document name'</span>/_update -H <span class="string">'Content-type:application/json'</span> -d <span class="string">'&#123;"script":"ctx._source.unit += 5"&#125;'</span></span><br></pre></td></tr></table></figure>
+<p>데이터를 bulk로 저장하려면 json 파일에 index, type, id를 지정하여 데이터를 입력하여 저장한 후 다음 명령어를 통해 저장.</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bulk.json</span><br><span class="line"></span><br><span class="line">&#123;<span class="attr">"index"</span>:&#123; <span class="attr">"_index"</span>:<span class="string">"classes"</span>,<span class="attr">"_type"</span>:<span class="string">"class"</span>,<span class="attr">"_id"</span>:<span class="string">"1"</span>&#125;&#125;</span><br><span class="line">&#123;<span class="attr">"title"</span>:<span class="string">"algorithm"</span>,<span class="attr">"Professor"</span>:<span class="string">"john"</span>&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST http://localhost:9200/_bulk --data-binary -H <span class="string">'Content-type:application/json'</span> -d @bulk.json</span><br></pre></td></tr></table></figure>
+<h5 id="Mapping"><a href="#Mapping" class="headerlink" title="Mapping"></a>Mapping</h5><p>매핑없이 elastic search에 데이터를 넣을 수 있지만 매우 위험하다. 이유는 타입형에서도 혼선이 올 수 있으며,  Kibana로 시각화 할때 적절한 출력이 안될 수 있는 등 다양한 위험 요소가 존재 힌다. 따라서 데이터를 입력하기 전에 Mapping을 통해 자료형을 저장한 후 데이터를 입력.</p>
+<p>데이터 관리시에는 매핑을 먼저 추가하고, 데이터가 이미 있을때는 매핑을 추후에 추가하여, 분석이나 시각화할때 도움이 될 수 있음.</p>
+<p>Mapping 방법은 다음과 같다.</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">mapping.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="attr">"class"</span> : &#123;</span><br><span class="line">		<span class="attr">"properties"</span> : &#123;</span><br><span class="line">			<span class="attr">"title"</span> : &#123;</span><br><span class="line">				<span class="attr">"type"</span> : <span class="string">"keyword"</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="attr">"professor"</span> : &#123;</span><br><span class="line">				<span class="attr">"type"</span> : <span class="string">"keyword"</span></span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X PUT http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/_mapping?include_type_name=<span class="literal">true</span>&amp;pretty -H <span class="string">'Content-type:application/json'</span> -d @mapping.json</span><br></pre></td></tr></table></figure>
+<p>include_type_name=true가 없으면 illegal_argument_exception 에러가 발생하여 추가.</p>
+<h5 id="Search"><a href="#Search" class="headerlink" title="Search"></a>Search</h5><p>전체 조회는 검색조건 없이 조회하면 되고, 검색 조건을 통한 방법은 url에서 query 파라미터를 추가 하는 방법과 request body를 추가하는 방법 존재.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X GET http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/_search</span><br><span class="line">$ curl -X GET http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/_search?&amp;q=points:30 </span><br><span class="line">$ curl -X GET http://localhost:9200/<span class="string">'class name'</span>/<span class="string">'type name'</span>/_search -d <span class="string">'&#123;"query":&#123;"term":&#123;"points":30&#125;&#125;&#125;'</span> -H <span class="string">'Content-type:application/json'</span></span><br></pre></td></tr></table></figure>
+<p>request body에는 여러가지 옵션이 존재함. 자세히 살펴보려면 <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-body.html" target="_blank" rel="noopener">문서</a>를 확인.</p>
+<h5 id="Aggregation"><a href="#Aggregation" class="headerlink" title="Aggregation"></a>Aggregation</h5><p> document 안에서 조합을 통해서 어떠한 값을 도출할때 쓰이는 방법을 Aggregation 이라한다. aggregation의 종류는 Bucketing, Metric, Matrix, Pipeline이 있으며, 구조는 다음과 같다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"aggregations"</span> : &#123;</span><br><span class="line">	<span class="string">"&lt;aggregation_name&gt;"</span> : &#123;</span><br><span class="line">		<span class="string">"&lt;aggregation_type&gt;"</span> : &#123;</span><br><span class="line">		&#125;</span><br><span class="line">		[,<span class="string">"meta"</span>:&#123;[&lt;meta_data_body&gt;]&#125;]?</span><br><span class="line">		[,<span class="string">"aggregations"</span>:&#123;[&lt;sub_aggregation&gt;]+&#125;]&#125;]?</span><br><span class="line">	&#125;</span><br><span class="line">	[, <span class="string">"&lt;aggregation_name_2&gt;"</span>:&#123;...&#125;]*</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>Bucketing</p>
+<p>버킷을 작성하는 Aggregation으로, 각 버킷은 키 및 문서 기준과 연결.  Aggregation이 실행될 때 모든 버킷 기준이 컨텍스트의 모든 document에서 평가되고 기준이 일치하면 문서가 관련 버킷에 “fall in”한 것으로 간주. Aggregation  프로세스가 끝날 때마다 버킷 목록이 생김. 각 버킷에는 “belong”된 문서 세트 존재.</p>
+</li>
+<li><p>Metric</p>
+<p>일련의 문서에서 메트릭을 추적하고 계산하는 Aggregation.</p>
+</li>
+<li><p>Matrix</p>
+<p>여러 필드에서 작동하고 요청 된 문서 필드에서 추출 된 값을 기반으로 매트릭스 결과를 생성하는 Aggregation.</p>
+</li>
+<li><p>Pipeline</p>
+<p>다른 집계 및 관련 메트릭의 결과를 집계하는 Aggregation </p>
+</li>
+</ul>
+<p>하위 예제에서 사용할 document</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"> basketball_mapping.json </span><br><span class="line"> </span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"record"</span> : &#123;</span><br><span class="line">		<span class="string">"properties"</span> : &#123;</span><br><span class="line">			<span class="string">"team"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"text"</span>,</span><br><span class="line">				<span class="string">"fielddata"</span> : <span class="literal">true</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="string">"name"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"text"</span>,</span><br><span class="line">				<span class="string">"fielddata"</span> : <span class="literal">true</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="string">"points"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"long"</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="string">"rebounds"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"long"</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="string">"assists"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"long"</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="string">"blocks"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"long"</span></span><br><span class="line">			&#125;,</span><br><span class="line">			<span class="string">"submit_date"</span> : &#123;</span><br><span class="line">				<span class="string">"type"</span> : <span class="string">"date"</span>,</span><br><span class="line">				<span class="string">"format"</span> : <span class="string">"yyyy-MM-dd"</span></span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">twoteam_basketball.json  </span><br><span class="line"></span><br><span class="line"> <span class="string">"index"</span> : &#123; <span class="string">"_index"</span> : <span class="string">"basketball"</span>, <span class="string">"_type"</span> : <span class="string">"record"</span>, <span class="string">"_id"</span> : <span class="string">"1"</span> &#125; &#125;</span><br><span class="line">&#123;<span class="string">"team"</span> : <span class="string">"Chicago"</span>,<span class="string">"name"</span> : <span class="string">"Michael Jordan"</span>, <span class="string">"points"</span> : 30,<span class="string">"rebounds"</span> : 3,<span class="string">"assists"</span> : 4, <span class="string">"blocks"</span> : 3, <span class="string">"submit_date"</span> : <span class="string">"1996-10-11"</span>&#125;</span><br><span class="line">&#123; <span class="string">"index"</span> : &#123; <span class="string">"_index"</span> : <span class="string">"basketball"</span>, <span class="string">"_type"</span> : <span class="string">"record"</span>, <span class="string">"_id"</span> : <span class="string">"2"</span> &#125; &#125;</span><br><span class="line">&#123;<span class="string">"team"</span> : <span class="string">"Chicago"</span>,<span class="string">"name"</span> : <span class="string">"Michael Jordan"</span>,<span class="string">"points"</span> : 20,<span class="string">"rebounds"</span> : 5,<span class="string">"assists"</span> : 8, <span class="string">"blocks"</span> : 4, <span class="string">"submit_date"</span> : <span class="string">"1996-10-13"</span>&#125;</span><br><span class="line">&#123; <span class="string">"index"</span> : &#123; <span class="string">"_index"</span> : <span class="string">"basketball"</span>, <span class="string">"_type"</span> : <span class="string">"record"</span>, <span class="string">"_id"</span> : <span class="string">"3"</span> &#125; &#125;</span><br><span class="line">&#123;<span class="string">"team"</span> : <span class="string">"LA"</span>,<span class="string">"name"</span> : <span class="string">"Kobe Bryant"</span>,<span class="string">"points"</span> : 30,<span class="string">"rebounds"</span> : 2,<span class="string">"assists"</span> : 8, <span class="string">"blocks"</span> : 5, <span class="string">"submit_date"</span> : <span class="string">"2014-10-13"</span>&#125;</span><br><span class="line">&#123; <span class="string">"index"</span> : &#123; <span class="string">"_index"</span> : <span class="string">"basketball"</span>, <span class="string">"_type"</span> : <span class="string">"record"</span>, <span class="string">"_id"</span> : <span class="string">"4"</span> &#125; &#125;</span><br><span class="line">&#123;<span class="string">"team"</span> : <span class="string">"LA"</span>,<span class="string">"name"</span> : <span class="string">"Kobe Bryant"</span>,<span class="string">"points"</span> : 40,<span class="string">"rebounds"</span> : 4,<span class="string">"assists"</span> : 8, <span class="string">"blocks"</span> : 6, <span class="string">"submit_date"</span> : <span class="string">"2014-11-13"</span>&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="Metric-Aggregation"><a href="#Metric-Aggregation" class="headerlink" title="Metric Aggregation"></a>Metric Aggregation</h5><p> document 안에서 조합을 통해서 어떠한 값을 도출할때 쓰이는 방법을 Aggregation 이라하고 그 중 최댓값, 최솟값, 평균값 등 산술관련한 연산이 필요할 경우 metric aggregations을 사용한다. 간단한 예로 최대, 최소, 평균값을 구하면 다음과 같다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">avg_metric.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"size"</span> : 0,</span><br><span class="line">	<span class="string">"aggs"</span> : &#123;<span class="string">"avg_score"</span> : &#123; <span class="string">"avg"</span> : &#123; <span class="string">"field"</span> : <span class="string">"points"</span>&#125;&#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X GET http://localhost:9200/_search\?pretty -H <span class="string">'content-type:application/json'</span> --data-binary @avg_metric.json</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">min_metric.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"size"</span> : 0,</span><br><span class="line">	<span class="string">"aggs"</span> : &#123;<span class="string">"avg_score"</span> : &#123; <span class="string">"min"</span> : &#123; <span class="string">"field"</span> : <span class="string">"points"</span>&#125;&#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X GET http://localhost:9200/_search\?pretty -H <span class="string">'content-type:application/json'</span> --data-binary @avg_metric.json</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">max_metric.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"size"</span> : 0,</span><br><span class="line">	<span class="string">"aggs"</span> : &#123;<span class="string">"avg_score"</span> : &#123; <span class="string">"max"</span> : &#123; <span class="string">"field"</span> : <span class="string">"points"</span>&#125;&#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X GET http://localhost:9200/_search\?pretty -H <span class="string">'content-type:application/json'</span> --data-binary @maxcat st	_metric.json</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">stats_metric.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"size"</span> : 0,</span><br><span class="line">	<span class="string">"aggs"</span> : &#123;<span class="string">"avg_score"</span> : &#123; <span class="string">"stats"</span> : &#123; <span class="string">"field"</span> : <span class="string">"points"</span>&#125;&#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X GET http://localhost:9200/_search\?pretty -H <span class="string">'content-type:application/json'</span> --data-binary @stats_metric.json</span><br></pre></td></tr></table></figure>
+<p>metrics aggregation의 옵션들을 자세히 살펴보려면 <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html" target="_blank" rel="noopener">문서</a>를 확인.</p>
+<h5 id="Bucket-Aggregation"><a href="#Bucket-Aggregation" class="headerlink" title="Bucket Aggregation"></a>Bucket Aggregation</h5><p>bucket aggregation은 group by의 개념과 흡사하다. 각 필드에서 값을 계산하지는 않지만 각 bucket은 키 및 document criterion과 연결하여 document bucket을 생성한다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">terms_aggs.json </span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"size"</span> : 0,</span><br><span class="line">	<span class="string">"aggs"</span> : &#123;<span class="string">"players"</span> : &#123;<span class="string">"terms"</span> : &#123;<span class="string">"field"</span> : <span class="string">"team"</span>&#125;&#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -XGET http://localhost:9200/_search\?pretty -H <span class="string">'content-type:application/json'</span> --data-binary @terms_aggs.json</span><br></pre></td></tr></table></figure>
+<p>bucket과 metric을 조합하면 특정 필드별 계산된 값을 얻을 수 있다.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">stats_by_team.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">	<span class="string">"size"</span> : 0,</span><br><span class="line">	<span class="string">"aggs"</span> : &#123;</span><br><span class="line">		<span class="string">"team_stats"</span> : &#123;</span><br><span class="line">		    <span class="string">"terms"</span> : &#123;<span class="string">"field"</span> : <span class="string">"team"</span>&#125;,</span><br><span class="line">			<span class="string">"aggs"</span> : &#123;</span><br><span class="line">			    <span class="string">"stats_score"</span> : &#123;<span class="string">"stats"</span> : &#123;<span class="string">"field"</span> : <span class="string">"points"</span>&#125;&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ curl -XGET http://localhost:9200/_search\?pretty -H <span class="string">'content-type:application/json'</span> --data-binary @stats_by_team.json</span><br></pre></td></tr></table></figure>
+<p>bucket aggregation의 옵션들을 자세히 살펴보려면 <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket.html" target="_blank" rel="noopener">문서</a>를 확인.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://www.elastic.co/guide/index.html" target="_blank" rel="noopener">Elastic Stack and Product Documentation</a></li>
+<li><a href="https://github.com/minsuk-heo/BigData" target="_blank" rel="noopener">https://github.com/minsuk-heo/BigData</a></li>
+</ul>
+<h2 id="Contributors"><a href="#Contributors" class="headerlink" title="Contributors"></a>Contributors</h2><ul>
+<li>오형석<a href="ohs4123@gmail.com">(ohs4123@gmail.com)</a></li>
+</ul>
+
+            
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">TAGGED IN</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/elasticsearch/">elasticsearch</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2021/04/12/fastcampus-tdd-01/" data-tooltip="fastcampus TDD 학습 01" aria-label="PREVIOUS: fastcampus TDD 학습 01">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/02/25/spring-core-aop/" data-tooltip="Spring 핵심 기술 (AOP)" aria-label="NEXT: Spring 핵심 기술 (AOP)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/12/24/elasticsearch-tutorial/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/12/24/elasticsearch-tutorial/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/12/24/elasticsearch-tutorial/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2021 hsoh. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2021/04/12/fastcampus-tdd-01/" data-tooltip="fastcampus TDD 학습 01" aria-label="PREVIOUS: fastcampus TDD 학습 01">
+                
+                    <i class="fa fa-angle-left" aria-hidden="true"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">PREVIOUS</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2019/02/25/spring-core-aop/" data-tooltip="Spring 핵심 기술 (AOP)" aria-label="NEXT: Spring 핵심 기술 (AOP)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">NEXT</span>
+                    <i class="fa fa-angle-right" aria-hidden="true"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions" href="#btn-open-shareoptions" aria-label="Share this post">
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/12/24/elasticsearch-tutorial/" title="Share on Facebook">
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/12/24/elasticsearch-tutorial/" title="Share on Twitter">
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/12/24/elasticsearch-tutorial/" title="Share on Google+">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <i id="btn-close-shareoptions" class="fa fa-times"></i>
+    <ul class="share-options">
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2019/12/24/elasticsearch-tutorial/">
+                    <i class="fab fa-facebook" aria-hidden="true"></i><span>Share on Facebook</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://yoursite.com/2019/12/24/elasticsearch-tutorial/">
+                    <i class="fab fa-twitter" aria-hidden="true"></i><span>Share on Twitter</span>
+                </a>
+            </li>
+        
+            
+            
+            <li class="share-option">
+                <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://yoursite.com/2019/12/24/elasticsearch-tutorial/">
+                    <i class="fab fa-google-plus" aria-hidden="true"></i><span>Share on Google+</span>
+                </a>
+            </li>
+        
+    </ul>
+</div>
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">hsoh</h4>
+        
+            <div id="about-card-bio"><p>오형석</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>Programmer</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                korea
+            </div>
+        
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/jquery.js"></script>
+<script src="/assets/js/jquery.fancybox.js"></script>
+<script src="/assets/js/thumbs.js"></script>
+<script src="/assets/js/tranquilpeak.js"></script>
+<!--SCRIPTS END-->
+
+    
+
+
+
+    </body>
+</html>
